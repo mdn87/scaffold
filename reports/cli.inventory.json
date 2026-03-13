@@ -1,0 +1,46 @@
+{
+    "targetPath":  "C:\\mn\\cli",
+    "projectName":  "cli",
+    "generatedOn":  "2026-03-13 12:45:31",
+    "projectTypeHints":  [
+                             "python"
+                         ],
+    "recommendation":  "adopt",
+    "structure":  {
+                      "baselineDirectories":  [
+                                                  {
+                                                      "name":  "docs",
+                                                      "exists":  true
+                                                  },
+                                                  {
+                                                      "name":  "src",
+                                                      "exists":  true
+                                                  },
+                                                  {
+                                                      "name":  "tests",
+                                                      "exists":  true
+                                                  }
+                                              ],
+                      "baselineFiles":  [
+                                            {
+                                                "name":  ".gitignore",
+                                                "exists":  true
+                                            },
+                                            {
+                                                "name":  "README.md",
+                                                "exists":  true
+                                            }
+                                        ]
+                  },
+    "ruleFiles":  [
+
+                  ],
+    "manifests":  [
+                      {
+                          "path":  "pyproject.toml"
+                      }
+                  ],
+    "likelyInterfaces":  [
+
+                         ]
+}

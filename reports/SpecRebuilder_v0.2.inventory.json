@@ -1,0 +1,228 @@
+{
+    "targetPath":  "C:\\Users\\mnewman\\Documents\\Admin\\Spec Templates\\SpecRebuilder_v0.2",
+    "projectName":  "SpecRebuilder_v0.2",
+    "generatedOn":  "2026-03-13 15:54:35",
+    "projectTypeHints":  [
+                             "agent-rules",
+                             "dotnet",
+                             "solution",
+                             "static-web-assets"
+                         ],
+    "recommendation":  "map",
+    "structure":  {
+                      "baselineDirectories":  [
+                                                  {
+                                                      "name":  "docs",
+                                                      "exists":  true
+                                                  },
+                                                  {
+                                                      "name":  "src",
+                                                      "exists":  true
+                                                  },
+                                                  {
+                                                      "name":  "tests",
+                                                      "exists":  false
+                                                  }
+                                              ],
+                      "baselineFiles":  [
+                                            {
+                                                "name":  ".gitignore",
+                                                "exists":  true
+                                            },
+                                            {
+                                                "name":  "README.md",
+                                                "exists":  true
+                                            }
+                                        ]
+                  },
+    "ruleFiles":  [
+                      {
+                          "path":  ".agent\\rules\\always-approve-whitelisted-commands.md"
+                      },
+                      {
+                          "path":  ".agent\\rules\\quota-drain-prevention.md"
+                      },
+                      {
+                          "path":  ".agent\\rules\\restart-api-host-as-needed.md"
+                      },
+                      {
+                          "path":  ".agents\\always-approve-whitelisted-commands.md"
+                      },
+                      {
+                          "path":  ".agents\\quota-drain-prevention.md"
+                      },
+                      {
+                          "path":  ".agents\\restart-api-host-as-needed.md"
+                      },
+                      {
+                          "path":  ".agents\\rules.md"
+                      }
+                  ],
+    "manifests":  [
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidator.sln"
+                      },
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidatorCLI\\OOXMLValidatorCLI.csproj"
+                      },
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidatorCLITests\\OOXMLValidatorCLITests.csproj"
+                      },
+                      {
+                          "path":  "SpecRebuilder_v0.2.csproj"
+                      },
+                      {
+                          "path":  "SpecRebuilder_v0.2.sln"
+                      },
+                      {
+                          "path":  "src\\Tools\\BwaStyleCli\\BwaStyleCli.csproj"
+                      }
+                  ],
+    "likelyInterfaces":  [
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  12,
+                                 "text":  "[Route(\"api/style\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  25,
+                                 "text":  "[HttpGet(\"templates\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  42,
+                                 "text":  "[HttpPost(\"templates/base/generate\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  63,
+                                 "text":  "[HttpPost(\"templates/playground/generate\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  89,
+                                 "text":  "[HttpPost(\"templates/validate/{clientName}\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  111,
+                                 "text":  "[HttpPost(\"documents/validate\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  181,
+                                 "text":  "[HttpGet(\"templates/{clientName}/download\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  209,
+                                 "text":  "[HttpPost(\"templates/upload\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  246,
+                                 "text":  "[HttpGet(\"playgrounds/{clientName}/download\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  273,
+                                 "text":  "[HttpPost(\"templates/create-from-json\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  299,
+                                 "text":  "[HttpPost(\"apply-json\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  353,
+                                 "text":  "[HttpPost(\"apply\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\StyleApiController.cs",
+                                 "line":  402,
+                                 "text":  "[HttpPost(\"apply-batch\")]"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  74,
+                                 "text":  "app.MapGet(\"/api/config\", () =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  96,
+                                 "text":  "app.MapGet(\"/api/exports\", () =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  160,
+                                 "text":  "app.MapGet(\"/api/jobs/{id}\", (string id) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  170,
+                                 "text":  "app.MapGet(\"/api/chunks/{documentId}\", async (string documentId) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  219,
+                                 "text":  "app.MapPost(\"/api/analyze\", async (HttpRequest request) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  453,
+                                 "text":  "app.MapPost(\"/api/export\", async (HttpContext context) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  562,
+                                 "text":  "app.MapGet(\"/api/stylegroups\", () =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  617,
+                                 "text":  "app.MapGet(\"/api/stylegroups/{id}\", (string id) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  659,
+                                 "text":  "app.MapPost(\"/api/stylegroups\", async (HttpContext context) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  709,
+                                 "text":  "app.MapPut(\"/api/stylegroups/{id}\", async (string id, HttpContext context) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  757,
+                                 "text":  "app.MapDelete(\"/api/stylegroups/{id}\", (string id) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  789,
+                                 "text":  "app.MapGet(\"/api/styles/{documentId}\", (string documentId) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  826,
+                                 "text":  "app.MapPost(\"/api/styles/{documentId}\", async (string documentId, HttpContext context) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  871,
+                                 "text":  "app.MapGet(\"/api/visualizer/discrepancies/{sessionId}\", (string sessionId) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  909,
+                                 "text":  "app.MapGet(\"/api/style/css/{clientName}\", (string clientName) =\u003e"
+                             },
+                             {
+                                 "path":  "src\\API\\VisualizerApi.cs",
+                                 "line":  924,
+                                 "text":  "app.MapGet(\"/api/export-report/{documentName}\", (string documentName) =\u003e"
+                             }
+                         ]
+}

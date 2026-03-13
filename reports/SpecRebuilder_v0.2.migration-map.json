@@ -1,0 +1,183 @@
+{
+    "targetPath":  "C:\\Users\\mnewman\\Documents\\Admin\\Spec Templates\\SpecRebuilder_v0.2",
+    "projectName":  "SpecRebuilder_v0.2",
+    "generatedOn":  "2026-03-13 15:54:36",
+    "basedOnInventory":  "SpecRebuilder_v0.2.inventory.json",
+    "recommendation":  "map",
+    "decisions":  {
+                      "rules":  "preserve",
+                      "structure":  "map",
+                      "interfaces":  "split",
+                      "dependencies":  "map"
+                  },
+    "baseline":  {
+                     "adopt":  [
+
+                               ],
+                     "map":  [
+                                 "dir:docs",
+                                 "dir:src"
+                             ],
+                     "keep":  [
+                                  "file:.gitignore",
+                                  "file:README.md"
+                              ]
+                 },
+    "ruleFiles":  [
+                      {
+                          "path":  ".agent\\rules\\always-approve-whitelisted-commands.md",
+                          "action":  "preserve"
+                      },
+                      {
+                          "path":  ".agent\\rules\\quota-drain-prevention.md",
+                          "action":  "preserve"
+                      },
+                      {
+                          "path":  ".agent\\rules\\restart-api-host-as-needed.md",
+                          "action":  "preserve"
+                      },
+                      {
+                          "path":  ".agents\\always-approve-whitelisted-commands.md",
+                          "action":  "preserve"
+                      },
+                      {
+                          "path":  ".agents\\quota-drain-prevention.md",
+                          "action":  "preserve"
+                      },
+                      {
+                          "path":  ".agents\\restart-api-host-as-needed.md",
+                          "action":  "preserve"
+                      },
+                      {
+                          "path":  ".agents\\rules.md",
+                          "action":  "preserve"
+                      }
+                  ],
+    "manifests":  [
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidator.sln"
+                      },
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidatorCLI\\OOXMLValidatorCLI.csproj"
+                      },
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidatorCLITests\\OOXMLValidatorCLITests.csproj"
+                      },
+                      {
+                          "path":  "SpecRebuilder_v0.2.csproj"
+                      },
+                      {
+                          "path":  "SpecRebuilder_v0.2.sln"
+                      },
+                      {
+                          "path":  "src\\Tools\\BwaStyleCli\\BwaStyleCli.csproj"
+                      }
+                  ],
+    "interfaces":  [
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  12,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  25,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  42,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  63,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  89,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  111,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  181,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  209,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  246,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  273,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  299,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  353,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\StyleApiController.cs",
+                           "line":  402,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  74,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  96,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  160,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  170,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  219,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  453,
+                           "action":  "split"
+                       },
+                       {
+                           "path":  "src\\API\\VisualizerApi.cs",
+                           "line":  562,
+                           "action":  "split"
+                       }
+                   ],
+    "nextSteps":  [
+                      "Review scaffold-managed files before applying structural changes.",
+                      "Confirm preserve/merge decisions for any agent rules.",
+                      "Translate detected interfaces into explicit architecture context."
+                  ]
+}

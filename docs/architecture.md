@@ -1,0 +1,18 @@
+# Architecture
+
+## Project
+
+`scaffold`
+
+## Purpose
+
+Describe the problem this project solves and the intended users.
+
+## Boundaries
+
+- What belongs in this repository
+- What does not belong in this repository
+
+## Key Decisions
+
+- Record major technical choices here or link to ADRs in `docs/decisions/`

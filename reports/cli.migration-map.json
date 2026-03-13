@@ -1,0 +1,44 @@
+{
+    "targetPath":  "C:\\mn\\cli",
+    "projectName":  "cli",
+    "generatedOn":  "2026-03-13 12:45:31",
+    "basedOnInventory":  "cli.inventory.json",
+    "recommendation":  "adopt",
+    "decisions":  {
+                      "rules":  "derive",
+                      "structure":  "adopt",
+                      "interfaces":  "adopt",
+                      "dependencies":  "adopt"
+                  },
+    "baseline":  {
+                     "adopt":  [
+                                   "dir:docs",
+                                   "dir:src",
+                                   "dir:tests",
+                                   "file:.gitignore",
+                                   "file:README.md"
+                               ],
+                     "map":  [
+
+                             ],
+                     "keep":  [
+
+                              ]
+                 },
+    "ruleFiles":  [
+
+                  ],
+    "manifests":  [
+                      {
+                          "path":  "pyproject.toml"
+                      }
+                  ],
+    "interfaces":  [
+
+                   ],
+    "nextSteps":  [
+                      "Review scaffold-managed files before applying structural changes.",
+                      "Confirm preserve/merge decisions for any agent rules.",
+                      "Translate detected interfaces into explicit architecture context."
+                  ]
+}
