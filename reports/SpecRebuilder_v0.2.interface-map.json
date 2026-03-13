@@ -1,0 +1,134 @@
+{
+    "targetPath": "./SpecRebuilder_v0.2",
+    "projectName": "SpecRebuilder_v0.2",
+    "generatedOn": "2026-03-13",
+    "basedOn": "Full crawl of src/API/StyleApiController.cs (470 lines) and src/API/VisualizerApi.cs (1305 lines)",
+    "hostEntry": {
+        "file": "Program.cs",
+        "trigger": "dotnet run --api",
+        "delegates": "VisualizerApi.CreateApiApp()",
+        "port": 5000,
+        "notes": "MVC controllers registered via app.MapControllers(); static files via app.UseStaticFiles()"
+    },
+    "summary": {
+        "totalEndpoints": 29,
+        "groups": 7,
+        "sourceFiles": 2,
+        "previousOtherApiBucket": 12,
+        "resolvedOtherApiBucket": 0
+    },
+    "groups": [
+        {
+            "name": "template-management",
+            "description": "CRUD and generation for BWA-style Word templates (.dotx). Manages base templates, client-specific templates, and playground documents.",
+            "owner": "src/API/StyleApiController.cs",
+            "routePrefix": "api/style",
+            "backingService": "StyleService",
+            "endpoints": [
+                { "method": "GET",    "route": "api/style/templates",                       "line": 25,  "purpose": "List all templates" },
+                { "method": "POST",   "route": "api/style/templates/base/generate",         "line": 42,  "purpose": "Generate BWA base template" },
+                { "method": "POST",   "route": "api/style/templates/playground/generate",   "line": 63,  "purpose": "Generate client playground document" },
+                { "method": "POST",   "route": "api/style/templates/validate/{clientName}", "line": 89,  "purpose": "Validate a client template" },
+                { "method": "DELETE", "route": "api/style/templates/{clientName}",           "line": 157, "purpose": "Delete a client template" },
+                { "method": "GET",    "route": "api/style/templates/{clientName}/download",  "line": 181, "purpose": "Download a client template (.dotx)" },
+                { "method": "POST",   "route": "api/style/templates/upload",                "line": 209, "purpose": "Upload a client template (.dotx)" },
+                { "method": "POST",   "route": "api/style/templates/create-from-json",      "line": 273, "purpose": "Create template from JSON style definitions" },
+                { "method": "GET",    "route": "api/style/playgrounds/{clientName}/download","line": 246, "purpose": "Download a playground document (.docx)" }
+            ]
+        },
+        {
+            "name": "document-style-application",
+            "description": "Apply style templates to uploaded Word documents. Supports single-file, batch, and ad-hoc JSON-based style application.",
+            "owner": "src/API/StyleApiController.cs",
+            "routePrefix": "api/style",
+            "backingService": "StyleService",
+            "endpoints": [
+                { "method": "POST",   "route": "api/style/documents/validate",  "line": 111, "purpose": "Validate an uploaded Word document" },
+                { "method": "POST",   "route": "api/style/apply",               "line": 353, "purpose": "Apply client template styles to uploaded .docx" },
+                { "method": "POST",   "route": "api/style/apply-json",          "line": 299, "purpose": "Apply ad-hoc JSON styles to uploaded .docx" },
+                { "method": "POST",   "route": "api/style/apply-batch",         "line": 402, "purpose": "Apply template to multiple .docx files, return ZIP" }
+            ]
+        },
+        {
+            "name": "analysis-pipeline",
+            "description": "Upload Word documents for AI-powered source decoding analysis. Supports first-time and iterative re-analysis with user feedback. Background job model with polling.",
+            "owner": "src/API/VisualizerApi.cs",
+            "routePrefix": "api",
+            "backingService": "SourceDecodingService",
+            "endpoints": [
+                { "method": "POST",   "route": "api/analyze",              "line": 219, "purpose": "Upload .docx and start analysis job (background)" },
+                { "method": "GET",    "route": "api/jobs/{id}",            "line": 160, "purpose": "Poll job status and progress" },
+                { "method": "GET",    "route": "api/chunks/{documentId}",  "line": 170, "purpose": "Retrieve cached chunk data from ready folder" }
+            ]
+        },
+        {
+            "name": "export-pipeline",
+            "description": "Export edited chunks back to Word documents. Optionally applies client template skin. Persists chunks to ready folder for reload.",
+            "owner": "src/API/VisualizerApi.cs",
+            "routePrefix": "api",
+            "backingService": "OpenXmlDocumentExporter, TemplateManager",
+            "endpoints": [
+                { "method": "POST",   "route": "api/export",                          "line": 453, "purpose": "Export chunks to .docx with optional template skin" },
+                { "method": "GET",    "route": "api/exports",                          "line": 96,  "purpose": "List available export JSON files (ready folder)" },
+                { "method": "GET",    "route": "api/export-report/{documentName}",     "line": 924, "purpose": "Get last export data report block for a document" }
+            ]
+        },
+        {
+            "name": "style-group-library",
+            "description": "Full CRUD for style group presets (CSI, BWA, RPA built-ins + user-created). Persisted as JSON files in examples/stylegroups.",
+            "owner": "src/API/VisualizerApi.cs",
+            "routePrefix": "api/stylegroups",
+            "backingService": "StyleGroup (model with factory methods)",
+            "endpoints": [
+                { "method": "GET",    "route": "api/stylegroups",       "line": 562, "purpose": "List all style groups (built-in + custom)" },
+                { "method": "GET",    "route": "api/stylegroups/{id}",  "line": 617, "purpose": "Load a specific style group" },
+                { "method": "POST",   "route": "api/stylegroups",       "line": 659, "purpose": "Create a new custom style group" },
+                { "method": "PUT",    "route": "api/stylegroups/{id}",  "line": 709, "purpose": "Update an existing custom style group" },
+                { "method": "DELETE", "route": "api/stylegroups/{id}",  "line": 757, "purpose": "Delete a custom style group" }
+            ]
+        },
+        {
+            "name": "per-document-styles",
+            "description": "Load and save style configuration for a specific analyzed document. Falls back to StyleConfiguration.CreateDefault() when no saved config exists.",
+            "owner": "src/API/VisualizerApi.cs",
+            "routePrefix": "api/styles",
+            "backingService": "StyleConfiguration (model)",
+            "endpoints": [
+                { "method": "GET",    "route": "api/styles/{documentId}",  "line": 789, "purpose": "Load saved style config (or default)" },
+                { "method": "POST",   "route": "api/styles/{documentId}",  "line": 826, "purpose": "Save style config for a document" },
+                { "method": "GET",    "route": "api/style/css/{clientName}","line": 909, "purpose": "Extract CSS properties from a client template" }
+            ]
+        },
+        {
+            "name": "diagnostics",
+            "description": "Operational and diagnostic endpoints for the visualizer pipeline.",
+            "owner": "src/API/VisualizerApi.cs",
+            "routePrefix": "api",
+            "backingService": "VisualizerDiscrepancyTracker, AppSettings",
+            "endpoints": [
+                { "method": "GET",    "route": "api/config",                                    "line": 74,  "purpose": "Get runtime config (exports folder path, etc.)" },
+                { "method": "GET",    "route": "api/visualizer/discrepancies/{sessionId}",      "line": 871, "purpose": "Retrieve analysis-to-visualizer discrepancy log" }
+            ]
+        }
+    ],
+    "staticAssets": {
+        "root": "wwwroot",
+        "entryPoint": "wwwroot/index.html",
+        "servedBy": "app.UseDefaultFiles() + app.UseStaticFiles()",
+        "notes": "Single-page visualizer UI. Registered after API routes to avoid route conflicts."
+    },
+    "architectureNotes": [
+        "Two API registration styles coexist: MVC controller (StyleApiController) and Minimal API (VisualizerApi). Both are registered in CreateApiApp().",
+        "StyleApiController depends on StyleService (newed up directly, no DI). VisualizerApi inline-resolves its dependencies.",
+        "Analysis pipeline uses a background Task.Run with an in-memory ConcurrentDictionary job store — jobs do not survive process restart.",
+        "File I/O is heavy: exports, ready folder, stylegroups, templates, playgrounds all use project-root-relative paths with bin-folder fallback logic.",
+        "CORS is fully open (AllowAnyOrigin) — appropriate for local-only dev tool, but would need lockdown if exposed."
+    ],
+    "previousGroupMapping": {
+        "style-template-api (9)": "Split into template-management (9) — now includes only template CRUD/generation",
+        "other-api (12)": "Dissolved into template-management (partial), document-style-application (4), and per-document-styles (1)",
+        "config-api (1)": "Moved to diagnostics (2) — grouped with discrepancy endpoint",
+        "analysis-export-api (6)": "Split into analysis-pipeline (3) and export-pipeline (3) — these are distinct workflows",
+        "visualizer-api (1)": "Moved to diagnostics (2) — the discrepancy endpoint is operational, not a user workflow"
+    }
+}
