@@ -1,6 +1,6 @@
-# Migration Map: cli
+﻿# Migration Map: cli
 
-- Target: C:\mn\cli
+- Target: ./cli
 - Generated: 2026-03-13 12:45:31
 - Recommendation: adopt
 - Based on: cli.inventory.json
@@ -45,3 +45,4 @@
 - Review scaffold-managed files before applying structural changes.
 - Confirm preserve/merge decisions for any agent rules.
 - Translate detected interfaces into explicit architecture context.
+

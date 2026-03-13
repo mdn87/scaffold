@@ -1,6 +1,6 @@
-# Project Inventory: SpecRebuilder_v0.2
+﻿# Project Inventory: SpecRebuilder_v0.2
 
-- Target: C:\Users\mnewman\Documents\Admin\Spec Templates\SpecRebuilder_v0.2
+- Target: ./SpecRebuilder_v0.2
 - Generated: 2026-03-13 15:54:35
 - Recommendation: map
 - Type hints: agent-rules, dotnet, solution, static-web-assets
@@ -54,3 +54,4 @@
 - `src\API\VisualizerApi.cs:219` - app.MapPost("/api/analyze", async (HttpRequest request) =>
 - `src\API\VisualizerApi.cs:453` - app.MapPost("/api/export", async (HttpContext context) =>
 - `src\API\VisualizerApi.cs:562` - app.MapGet("/api/stylegroups", () =>
+

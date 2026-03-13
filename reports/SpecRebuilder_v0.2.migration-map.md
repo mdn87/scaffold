@@ -1,6 +1,6 @@
-# Migration Map: SpecRebuilder_v0.2
+﻿# Migration Map: SpecRebuilder_v0.2
 
-- Target: C:\Users\mnewman\Documents\Admin\Spec Templates\SpecRebuilder_v0.2
+- Target: ./SpecRebuilder_v0.2
 - Generated: 2026-03-13 15:54:36
 - Recommendation: map
 - Based on: SpecRebuilder_v0.2.inventory.json
@@ -73,3 +73,4 @@
 - Review scaffold-managed files before applying structural changes.
 - Confirm preserve/merge decisions for any agent rules.
 - Translate detected interfaces into explicit architecture context.
+

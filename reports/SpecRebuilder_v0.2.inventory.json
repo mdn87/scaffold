@@ -1,5 +1,5 @@
-{
-    "targetPath":  "C:\\Users\\mnewman\\Documents\\Admin\\Spec Templates\\SpecRebuilder_v0.2",
+﻿{
+    "targetPath":  "./SpecRebuilder_v0.2",
     "projectName":  "SpecRebuilder_v0.2",
     "generatedOn":  "2026-03-13 15:54:35",
     "projectTypeHints":  [
@@ -226,3 +226,4 @@
                              }
                          ]
 }
+

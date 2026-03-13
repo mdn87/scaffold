@@ -1,0 +1,190 @@
+﻿{
+    "targetPath":  "./SpecRebuilder_v0.2",
+    "projectName":  "SpecRebuilder_v0.2",
+    "generatedOn":  "2026-03-13 16:03:03",
+    "basedOn":  {
+                    "inventory":  "SpecRebuilder_v0.2.inventory.json",
+                    "migrationMap":  "SpecRebuilder_v0.2.migration-map.json"
+                },
+    "summary":  {
+                    "projectKind":  "Hybrid desktop + API + static web assets",
+                    "purpose":  "analyzing and rebuilding CSI specification documents using Word COM Interop",
+                    "recommendation":  "map"
+                },
+    "scaffoldStance":  {
+                           "rules":  "preserve",
+                           "structure":  "map",
+                           "interfaces":  "split",
+                           "dependencies":  "map"
+                       },
+    "subsystems":  [
+                       "COM document analysis against Microsoft Word",
+                       "Rule-based structure detection",
+                       "Human review and correction workflow",
+                       "Learning and correction logging",
+                       "Static web visualizer/assets served from wwwroot",
+                       "HTTP API surface under src/API"
+                   ],
+    "authoritativeRules":  [
+                               {
+                                   "path":  ".agent\\rules\\always-approve-whitelisted-commands.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agent\\rules\\quota-drain-prevention.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agent\\rules\\restart-api-host-as-needed.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\always-approve-whitelisted-commands.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\quota-drain-prevention.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\restart-api-host-as-needed.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\rules.md",
+                                   "action":  "preserve"
+                               }
+                           ],
+    "ruleHighlights":  [
+                           "Preserve known pre-existing build errors as verification exclusions.",
+                           "Honor low-compute defaults unless the user explicitly asks for deeper analysis.",
+                           "API host commands are whitelisted for safe autorun within the project rule system.",
+                           "Restart the API host when changes need to be reflected in the visualizer/API layer."
+                       ],
+    "manifests":  [
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidator.sln"
+                      },
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidatorCLI\\OOXMLValidatorCLI.csproj"
+                      },
+                      {
+                          "path":  "OOXML-Validator\\OOXMLValidatorCLITests\\OOXMLValidatorCLITests.csproj"
+                      },
+                      {
+                          "path":  "SpecRebuilder_v0.2.csproj"
+                      },
+                      {
+                          "path":  "SpecRebuilder_v0.2.sln"
+                      },
+                      {
+                          "path":  "src\\Tools\\BwaStyleCli\\BwaStyleCli.csproj"
+                      }
+                  ],
+    "baseline":  {
+                     "adopt":  [
+
+                               ],
+                     "map":  [
+                                 "dir:docs",
+                                 "dir:src"
+                             ],
+                     "keep":  [
+                                  "file:.gitignore",
+                                  "file:README.md"
+                              ]
+                 },
+    "interfaceGroups":  [
+                            {
+                                "name":  "style-template-api",
+                                "count":  9,
+                                "examples":  [
+                                                 {
+                                                     "path":  "src\\API\\StyleApiController.cs",
+                                                     "line":  12,
+                                                     "text":  "[Route(\"api/style\")]"
+                                                 },
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  562,
+                                                     "text":  "app.MapGet(\"/api/stylegroups\", () =\u003e"
+                                                 },
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  617,
+                                                     "text":  "app.MapGet(\"/api/stylegroups/{id}\", (string id) =\u003e"
+                                                 }
+                                             ]
+                            },
+                            {
+                                "name":  "other-api",
+                                "count":  12,
+                                "examples":  [
+                                                 {
+                                                     "path":  "src\\API\\StyleApiController.cs",
+                                                     "line":  25,
+                                                     "text":  "[HttpGet(\"templates\")]"
+                                                 },
+                                                 {
+                                                     "path":  "src\\API\\StyleApiController.cs",
+                                                     "line":  42,
+                                                     "text":  "[HttpPost(\"templates/base/generate\")]"
+                                                 },
+                                                 {
+                                                     "path":  "src\\API\\StyleApiController.cs",
+                                                     "line":  63,
+                                                     "text":  "[HttpPost(\"templates/playground/generate\")]"
+                                                 }
+                                             ]
+                            },
+                            {
+                                "name":  "config-api",
+                                "count":  1,
+                                "examples":  [
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  74,
+                                                     "text":  "app.MapGet(\"/api/config\", () =\u003e"
+                                                 }
+                                             ]
+                            },
+                            {
+                                "name":  "analysis-export-api",
+                                "count":  6,
+                                "examples":  [
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  96,
+                                                     "text":  "app.MapGet(\"/api/exports\", () =\u003e"
+                                                 },
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  160,
+                                                     "text":  "app.MapGet(\"/api/jobs/{id}\", (string id) =\u003e"
+                                                 },
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  170,
+                                                     "text":  "app.MapGet(\"/api/chunks/{documentId}\", async (string documentId) =\u003e"
+                                                 }
+                                             ]
+                            },
+                            {
+                                "name":  "visualizer-api",
+                                "count":  1,
+                                "examples":  [
+                                                 {
+                                                     "path":  "src\\API\\VisualizerApi.cs",
+                                                     "line":  871,
+                                                     "text":  "app.MapGet(\"/api/visualizer/discrepancies/{sessionId}\", (string sessionId) =\u003e"
+                                                 }
+                                             ]
+                            }
+                        ],
+    "nextArtifacts":  [
+                          "Rule classification report consolidating .agent and .agents guidance.",
+                          "Explicit interface map with grouped endpoints and owning modules.",
+                          "Project-specific implementation plan that preserves the existing architecture."
+                      ]
+}
+

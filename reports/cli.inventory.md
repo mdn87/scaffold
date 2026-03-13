@@ -1,6 +1,6 @@
-# Project Inventory: cli
+﻿# Project Inventory: cli
 
-- Target: C:\mn\cli
+- Target: ./cli
 - Generated: 2026-03-13 12:45:31
 - Recommendation: adopt
 - Type hints: python
@@ -24,3 +24,4 @@
 ## Likely Interfaces
 
 - None detected
+
