@@ -2,7 +2,8 @@
 param(
     [string]$TargetPath = ".",
     [string]$ProjectName,
-    [switch]$Force
+    [switch]$Force,
+    [switch]$UseRemoteGitHubContext
 )
 
 Set-StrictMode -Version Latest
@@ -24,6 +25,22 @@ function Resolve-ProjectName {
     }
 
     return Split-Path -Leaf $ResolvedTargetPath
+}
+
+function Get-RelativePath {
+    param(
+        [string]$BasePath,
+        [string]$FullPath
+    )
+
+    $base = [System.IO.Path]::GetFullPath($BasePath)
+    $full = [System.IO.Path]::GetFullPath($FullPath)
+
+    if ($full.StartsWith($base, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $full.Substring($base.Length).TrimStart("\")
+    }
+
+    return $full
 }
 
 function Should-CopyFile {
@@ -73,13 +90,1054 @@ function Copy-TemplateTree {
     }
 }
 
+function Get-FileList {
+    param(
+        [string]$BasePath,
+        [string[]]$Patterns
+    )
+
+    $results = @()
+    foreach ($pattern in $Patterns) {
+        $results += Get-ChildItem -LiteralPath $BasePath -Recurse -File -Filter $pattern -ErrorAction SilentlyContinue
+    }
+
+    return $results | Sort-Object FullName -Unique
+}
+
+function Get-ManifestFiles {
+    param([string]$BasePath)
+
+    $patterns = @(
+        "package.json",
+        "pyproject.toml",
+        "requirements.txt",
+        "*.csproj",
+        "*.sln",
+        "Cargo.toml",
+        "go.mod"
+    )
+
+    return @(Get-FileList -BasePath $BasePath -Patterns $patterns)
+}
+
+function Get-AgentRuleFiles {
+    param([string]$BasePath)
+
+    $candidatePatterns = @("AGENTS.md", "*.md")
+    $files = Get-FileList -BasePath $BasePath -Patterns $candidatePatterns
+    return @($files | Where-Object {
+        $_.FullName -match "\\\.agent(s)?\\" -or
+        $_.Name -ieq "AGENTS.md"
+    })
+}
+
+function Get-ContextMarkdownFiles {
+    param([string]$BasePath)
+
+    $files = @(Get-ChildItem -LiteralPath $BasePath -Recurse -File -Filter *.md -ErrorAction SilentlyContinue | Where-Object {
+        $_.FullName -notmatch "\\\.agent(s)?\\" -and
+        $_.FullName -notmatch "\\.git\\" -and
+        $_.Name -ne ".gitkeep"
+    })
+
+    $ranked = $files | Sort-Object @{ Expression = {
+            if ($_.Name -ieq "README.md") { return 0 }
+            if ($_.Name -match "(?i)plan") { return 1 }
+            if ($_.Name -match "(?i)architecture|design|spec") { return 2 }
+            return 3
+        }
+    }, FullName
+
+    return @($ranked | Select-Object -First 10)
+}
+
+function Get-MeaningfulParagraph {
+    param([string]$Content)
+
+    $lines = $Content -split "`r?`n"
+    $buffer = New-Object System.Collections.Generic.List[string]
+
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+
+        if (-not $trimmed) {
+            if ($buffer.Count -gt 0) {
+                break
+            }
+
+            continue
+        }
+
+        if ($trimmed.StartsWith('#') -or $trimmed.StartsWith('```') -or $trimmed.StartsWith('-') -or $trimmed -match '^\d+\.') {
+            if ($buffer.Count -gt 0) {
+                break
+            }
+
+            continue
+        }
+
+        $buffer.Add($trimmed)
+    }
+
+    return ($buffer -join " ").Trim()
+}
+
+function Get-CommandHintsFromContent {
+    param([string]$Content)
+
+    $commands = New-Object System.Collections.Generic.List[string]
+    $matches = [regex]::Matches($Content, '`([^`\r\n]{3,160})`')
+
+    foreach ($match in $matches) {
+        $candidate = $match.Groups[1].Value.Trim()
+        if ($candidate -match '^(python|dotnet|npm|pnpm|yarn|git|cargo|go|pwsh|powershell|uv|poetry|pip|node)(\s|$)' -or
+            $candidate -match '^\.\\.+\.ps1(\s|$)' -or
+            $candidate -match '^python\s+.+\.py(\s|$)') {
+            $commands.Add($candidate)
+        }
+    }
+
+    return @($commands | Sort-Object -Unique)
+}
+
+function Get-SystemHintsFromContent {
+    param([string]$Content)
+
+    $lower = $Content.ToLowerInvariant()
+    $systems = New-Object System.Collections.Generic.List[string]
+
+    if ($lower -match 'power automate') { $systems.Add('Power Automate flow packaging/import') }
+    if ($lower -match 'office 365|outlook') { $systems.Add('Microsoft 365 / Outlook integration') }
+    if ($lower -match 'gateway|on-premises data gateway') { $systems.Add('On-premises data gateway dependency') }
+    if ($lower -match 'api|endpoint|route|controller') { $systems.Add('API or routed interface surface') }
+    if ($lower -match 'winforms|desktop') { $systems.Add('.NET desktop application workflow') }
+    if ($lower -match 'zip|import package') { $systems.Add('Packaged artifact generation/import workflow') }
+    if ($lower -match 'task scheduler|scheduled task') { $systems.Add('Windows Task Scheduler integration') }
+    if ($lower -match 'unc|file share|network share') { $systems.Add('UNC path / file share dependency') }
+
+    return @($systems | Sort-Object -Unique)
+}
+
+function Get-WorkflowHintsFromContent {
+    param([string]$Content)
+
+    $hints = New-Object System.Collections.Generic.List[string]
+    $lines = $Content -split "`r?`n"
+
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -match '^\d+\.' -or $trimmed.StartsWith('- ')) {
+            $clean = $trimmed -replace '^\d+\.\s*', ''
+            $clean = $clean -replace '^\-\s*', ''
+            if ($clean.Length -ge 12 -and $clean.Length -le 160) {
+                $hints.Add($clean)
+            }
+        }
+    }
+
+    return @($hints | Select-Object -First 8)
+}
+
+function Get-DocumentationContext {
+    param(
+        [string]$BasePath,
+        [System.IO.FileInfo[]]$MarkdownFiles
+    )
+
+    $sourceFiles = New-Object System.Collections.Generic.List[string]
+    $paragraphs = New-Object System.Collections.Generic.List[string]
+    $commands = New-Object System.Collections.Generic.List[string]
+    $systems = New-Object System.Collections.Generic.List[string]
+    $workflowHints = New-Object System.Collections.Generic.List[string]
+
+    foreach ($file in $MarkdownFiles) {
+        $content = Get-Content -LiteralPath $file.FullName -Raw
+        $sourceFiles.Add((Get-RelativePath -BasePath $BasePath -FullPath $file.FullName))
+
+        $paragraph = Get-MeaningfulParagraph -Content $content
+        if ($paragraph) {
+            $paragraphs.Add($paragraph)
+        }
+
+        foreach ($command in (Get-CommandHintsFromContent -Content $content)) {
+            $commands.Add($command)
+        }
+
+        foreach ($system in (Get-SystemHintsFromContent -Content $content)) {
+            $systems.Add($system)
+        }
+
+        foreach ($hint in (Get-WorkflowHintsFromContent -Content $content)) {
+            $workflowHints.Add($hint)
+        }
+    }
+
+    return [pscustomobject]@{
+        sourceFiles = @($sourceFiles)
+        purpose = if ($paragraphs.Count -gt 0) { $paragraphs[0] } else { $null }
+        commandHints = @($commands | Sort-Object -Unique)
+        systemHints = @($systems | Sort-Object -Unique)
+        workflowHints = @($workflowHints | Sort-Object -Unique | Select-Object -First 8)
+    }
+}
+
+function Get-CodeInferenceFiles {
+    param([string]$BasePath)
+
+    $priorityNames = @(
+        'Program.cs','main.py','app.py','server.py','index.ts','index.js','server.ts','server.js',
+        'manage.py','cli.py','app.ps1','main.ps1'
+    )
+
+    $files = @(Get-ChildItem -LiteralPath $BasePath -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
+        $_.FullName -notmatch '\\(bin|obj|node_modules|dist|build|__pycache__|\.git|\.agents|\.agent)\\' -and
+        $_.Extension -in @('.cs','.py','.ts','.tsx','.js','.jsx','.ps1','.psm1','.psd1','.json','.yaml','.yml')
+    })
+
+    $ranked = $files | Sort-Object @{ Expression = {
+            if ($priorityNames -contains $_.Name) { return 0 }
+            if ($_.DirectoryName -match '\\src($|\\)' -and $_.BaseName -match '(?i)program|main|app|server|cli') { return 1 }
+            if ($_.Name -match '(?i)reminder|archive|scheduler|worker|service|api|controller|flow|job') { return 2 }
+            return 3
+        }
+    }, FullName
+
+    return @($ranked | Select-Object -First 12)
+}
+
+function Get-CodePurposeSnippet {
+    param([string]$Path)
+
+    $lines = Get-Content -LiteralPath $Path -TotalCount 80 -ErrorAction SilentlyContinue
+    if (-not $lines) {
+        return $null
+    }
+
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -match '^(#|//)\s*(.+)$' -and $Matches[2].Length -ge 20) {
+            return $Matches[2].Trim()
+        }
+    }
+
+    return $null
+}
+function Get-CodeInferenceContext {
+    param([string]$BasePath)
+
+    $files = @(Get-CodeInferenceFiles -BasePath $BasePath)
+    $sourceFiles = New-Object System.Collections.Generic.List[string]
+    $purposeCandidates = New-Object System.Collections.Generic.List[string]
+    $workflowHints = New-Object System.Collections.Generic.List[string]
+    $systemHints = New-Object System.Collections.Generic.List[string]
+    $commandHints = New-Object System.Collections.Generic.List[string]
+    $keywords = New-Object System.Collections.Generic.List[string]
+
+    foreach ($file in $files) {
+        $relative = Get-RelativePath -BasePath $BasePath -FullPath $file.FullName
+        $sourceFiles.Add($relative)
+        $nameText = ($file.BaseName -replace '[_\-.]+', ' ')
+
+        foreach ($word in ($nameText -split '\s+')) {
+            if ($word.Length -ge 4) {
+                $keywords.Add($word.ToLowerInvariant())
+            }
+        }
+
+        $snippet = Get-CodePurposeSnippet -Path $file.FullName
+        if ($snippet) {
+            $purposeCandidates.Add($snippet)
+        }
+
+        if ($relative -match '(?i)task.?scheduler|scheduler|scheduled') { $systemHints.Add('Windows Task Scheduler integration') }
+        if ($relative -match '(?i)api|controller|route|server') { $systemHints.Add('API or routed interface surface') }
+        if ($relative -match '(?i)archive|archiv') { $workflowHints.Add('Archive-oriented processing or retention workflow') }
+        if ($relative -match '(?i)reminder|notify|email|mail') { $workflowHints.Add('Reminder or notification workflow') }
+        if ($relative -match '(?i)flow') { $workflowHints.Add('Flow or automation package generation') }
+        if ($relative -match '(?i)zip|package') { $workflowHints.Add('Package or artifact generation') }
+        if ($relative -match '(?i)job|worker|service') { $workflowHints.Add('Background job or service-style execution') }
+        if ($relative -match '(?i)cli') { $workflowHints.Add('Command-line entry point or utility workflow') }
+        if ($relative -match '(?i)form') { $systemHints.Add('.NET desktop application workflow') }
+
+        if ($file.Extension -eq '.py') { $commandHints.Add("python $relative") }
+        if ($file.Name -ieq 'Program.cs') { $commandHints.Add('dotnet build') }
+        if ($file.Extension -eq '.ps1') { $commandHints.Add(".\\$relative") }
+    }
+
+    $keywordSummary = @($keywords | Group-Object | Sort-Object @{ Expression = 'Count'; Descending = $true }, Name | Select-Object -First 6 | ForEach-Object { $_.Name })
+    $purpose = if ($purposeCandidates.Count -gt 0) {
+        $purposeCandidates[0]
+    }
+    elseif ($keywordSummary.Count -gt 0) {
+        'Likely project focus inferred from code and filenames: ' + ($keywordSummary -join ', ') + '.'
+    }
+    else {
+        $null
+    }
+
+    return [pscustomobject]@{
+        sourceFiles = @($sourceFiles)
+        purpose = $purpose
+        workflowHints = @($workflowHints | Sort-Object -Unique | Select-Object -First 8)
+        systemHints = @($systemHints | Sort-Object -Unique)
+        commandHints = @($commandHints | Sort-Object -Unique)
+        keywords = $keywordSummary
+    }
+}
+
+function Get-GitContext {
+    param([string]$BasePath)
+
+    $gitDir = Join-Path $BasePath '.git'
+    if (-not (Test-Path -LiteralPath $gitDir)) {
+        return [pscustomobject]@{
+            hasGit = $false
+            remoteUrl = $null
+            repoName = $null
+            sourceHint = $null
+        }
+    }
+
+    $remoteUrl = $null
+    try {
+        $remoteUrl = (& git -C $BasePath remote get-url origin 2>$null)
+    }
+    catch {
+        $remoteUrl = $null
+    }
+
+    $repoName = $null
+    if ($remoteUrl -match '/([^/]+?)(\.git)?$') {
+        $repoName = $Matches[1]
+    }
+
+    return [pscustomobject]@{
+        hasGit = $true
+        remoteUrl = if ($remoteUrl) { [string]$remoteUrl } else { $null }
+        repoName = $repoName
+        sourceHint = if ($remoteUrl -match 'github\.com') { 'GitHub remote configured locally' } elseif ($remoteUrl) { 'Git remote configured locally' } else { 'Git repo without remote' }
+    }
+}
+
+function ConvertFrom-Base64Utf8 {
+    param([string]$Value)
+
+    if (-not $Value) {
+        return $null
+    }
+
+    $normalized = $Value -replace '\s+', ''
+    $bytes = [System.Convert]::FromBase64String($normalized)
+    return [System.Text.Encoding]::UTF8.GetString($bytes)
+}
+
+function Get-GitHubRepoIdentity {
+    param([string]$RemoteUrl)
+
+    if (-not $RemoteUrl) {
+        return $null
+    }
+
+    if ($RemoteUrl -match '^https://github\.com/(?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?/?$') {
+        return [pscustomobject]@{ owner = $Matches.owner; repo = $Matches.repo }
+    }
+
+    if ($RemoteUrl -match '^git@github\.com:(?<owner>[^/]+)/(?<repo>[^/]+?)(?:\.git)?$') {
+        return [pscustomobject]@{ owner = $Matches.owner; repo = $Matches.repo }
+    }
+
+    return $null
+}
+
+function Get-RemoteGitHubContext {
+    param(
+        [object]$GitContext,
+        [switch]$UseRemoteGitHubContext
+    )
+
+    if (-not $UseRemoteGitHubContext.IsPresent) {
+        return [pscustomobject]@{
+            enabled = $false
+            attempted = $false
+            success = $false
+            source = $null
+            purpose = $null
+            workflowHints = @()
+            systemHints = @()
+            commandHints = @()
+            note = 'Remote GitHub enrichment not requested.'
+        }
+    }
+
+    if (-not $GitContext.hasGit -or -not $GitContext.remoteUrl) {
+        return [pscustomobject]@{
+            enabled = $true
+            attempted = $false
+            success = $false
+            source = $null
+            purpose = $null
+            workflowHints = @()
+            systemHints = @()
+            commandHints = @()
+            note = 'No Git remote available for remote enrichment.'
+        }
+    }
+
+    $identity = Get-GitHubRepoIdentity -RemoteUrl $GitContext.remoteUrl
+    if ($null -eq $identity) {
+        return [pscustomobject]@{
+            enabled = $true
+            attempted = $false
+            success = $false
+            source = $null
+            purpose = $null
+            workflowHints = @()
+            systemHints = @()
+            commandHints = @()
+            note = 'Remote enrichment currently supports GitHub remotes only.'
+        }
+    }
+
+    $headers = @{
+        'User-Agent' = 'scaffold-generator'
+        'Accept' = 'application/vnd.github+json'
+    }
+
+    try {
+        $repoUrl = "https://api.github.com/repos/$($identity.owner)/$($identity.repo)"
+        $repoInfo = Invoke-RestMethod -Uri $repoUrl -Headers $headers -TimeoutSec 8 -ErrorAction Stop
+
+        $readmeText = $null
+        try {
+            $readmeInfo = Invoke-RestMethod -Uri ($repoUrl + '/readme') -Headers $headers -TimeoutSec 8 -ErrorAction Stop
+            $readmeText = ConvertFrom-Base64Utf8 -Value $readmeInfo.content
+        }
+        catch {
+            $readmeText = $null
+        }
+
+        $purpose = if ($repoInfo.description) {
+            [string]$repoInfo.description
+        }
+        elseif ($readmeText) {
+            Get-MeaningfulParagraph -Content $readmeText
+        }
+        else {
+            $null
+        }
+
+        $workflowHints = @()
+        $systemHints = @()
+        $commandHints = @()
+
+        if ($readmeText) {
+            $workflowHints = @(Get-WorkflowHintsFromContent -Content $readmeText)
+            $systemHints = @(Get-SystemHintsFromContent -Content $readmeText)
+            $commandHints = @(Get-CommandHintsFromContent -Content $readmeText)
+        }
+
+        if ($repoInfo.homepage) {
+            $systemHints += 'Homepage/docs configured in repository metadata'
+        }
+
+        return [pscustomobject]@{
+            enabled = $true
+            attempted = $true
+            success = $true
+            source = "github.com/$($identity.owner)/$($identity.repo)"
+            purpose = $purpose
+            workflowHints = @($workflowHints | Sort-Object -Unique | Select-Object -First 8)
+            systemHints = @($systemHints | Sort-Object -Unique)
+            commandHints = @($commandHints | Sort-Object -Unique)
+            note = 'Remote GitHub enrichment succeeded.'
+        }
+    }
+    catch {
+        return [pscustomobject]@{
+            enabled = $true
+            attempted = $true
+            success = $false
+            source = "github.com/$($identity.owner)/$($identity.repo)"
+            purpose = $null
+            workflowHints = @()
+            systemHints = @()
+            commandHints = @()
+            note = 'Remote GitHub enrichment failed and was skipped.'
+        }
+    }
+}
+
+function Test-IsBlankProject {
+    param([string]$BasePath)
+
+    $files = @(Get-ChildItem -LiteralPath $BasePath -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
+        $_.FullName -notmatch '\\.git\\' -and
+        $_.FullName -notmatch '\\\.agent(s)?\\'
+    })
+
+    $nonBaseline = @($files | Where-Object {
+        $relative = Get-RelativePath -BasePath $BasePath -FullPath $_.FullName
+        $relative -notin @(
+            '.editorconfig',
+            '.gitignore',
+            'README.md',
+            'scaffold.config.json',
+            'docs\architecture.md',
+            'docs\decisions\.gitkeep',
+            'src\.gitkeep',
+            'tests\.gitkeep'
+        )
+    })
+
+    return @($nonBaseline).Count -eq 0
+}
+function Get-ExistingAgentRuleState {
+    param(
+        [string]$BasePath,
+        [System.IO.FileInfo[]]$RuleFiles
+    )
+
+    if (@($RuleFiles).Count -eq 0) {
+        return [pscustomobject]@{
+            kind = 'none'
+            outputRoot = (Join-Path $BasePath '.agents')
+        }
+    }
+
+    $managedPaths = @(
+        '.agents\rules.md',
+        '.agents\always-approve-whitelisted-commands.md',
+        '.agents\quota-drain-prevention.md',
+        '.agents\restart-api-host-as-needed.md',
+        '.agents\scaffold-generated\rules.md',
+        '.agents\scaffold-generated\always-approve-whitelisted-commands.md',
+        '.agents\scaffold-generated\quota-drain-prevention.md',
+        '.agents\scaffold-generated\restart-api-host-as-needed.md'
+    )
+
+    $relativePaths = @($RuleFiles | ForEach-Object { Get-RelativePath -BasePath $BasePath -FullPath $_.FullName })
+    $allManaged = @($relativePaths | Where-Object { $_ -notin $managedPaths }).Count -eq 0
+
+    if ($allManaged) {
+        $hasSidecar = @($relativePaths | Where-Object { $_ -like '.agents\scaffold-generated\*' }).Count -gt 0
+        return [pscustomobject]@{
+            kind = if ($hasSidecar) { 'scaffold-sidecar' } else { 'scaffold-direct' }
+            outputRoot = if ($hasSidecar) { (Join-Path $BasePath '.agents\scaffold-generated') } else { (Join-Path $BasePath '.agents') }
+        }
+    }
+
+    return [pscustomobject]@{
+        kind = 'project-owned'
+        outputRoot = (Join-Path $BasePath '.agents\scaffold-generated')
+    }
+}
+
+function Get-ProjectSignals {
+    param(
+        [string]$BasePath,
+        [switch]$UseRemoteGitHubContext
+    )
+
+    $manifestFiles = @(Get-ManifestFiles -BasePath $BasePath)
+    $markdownFiles = @(Get-ContextMarkdownFiles -BasePath $BasePath)
+    $documentation = Get-DocumentationContext -BasePath $BasePath -MarkdownFiles $markdownFiles
+    $codeInference = Get-CodeInferenceContext -BasePath $BasePath
+    $gitContext = Get-GitContext -BasePath $BasePath
+    $remoteGitHub = Get-RemoteGitHubContext -GitContext $gitContext -UseRemoteGitHubContext:$UseRemoteGitHubContext.IsPresent
+    $stackHints = New-Object System.Collections.Generic.List[string]
+
+    foreach ($file in $manifestFiles) {
+        switch -Wildcard ($file.Name) {
+            'pyproject.toml' { $stackHints.Add('python') }
+            'requirements.txt' { $stackHints.Add('python') }
+            'package.json' { $stackHints.Add('node') }
+            '*.csproj' { $stackHints.Add('dotnet') }
+            '*.sln' { $stackHints.Add('dotnet') }
+            'Cargo.toml' { $stackHints.Add('rust') }
+            'go.mod' { $stackHints.Add('go') }
+        }
+    }
+
+    foreach ($command in @($documentation.commandHints) + @($codeInference.commandHints) + @($remoteGitHub.commandHints)) {
+        if ($command -match '^python(\s|$)' -or $command -match '\.py(\s|$)') { $stackHints.Add('python') }
+        if ($command -match '^dotnet(\s|$)') { $stackHints.Add('dotnet') }
+        if ($command -match '^(npm|pnpm|yarn|node)(\s|$)') { $stackHints.Add('node') }
+        if ($command -match '^cargo(\s|$)') { $stackHints.Add('rust') }
+        if ($command -match '^go(\s|$)') { $stackHints.Add('go') }
+        if ($command -match '\.ps1(\s|$)') { $stackHints.Add('powershell') }
+    }
+
+    $stackHints = @($stackHints | Sort-Object -Unique)
+    $combinedSystemHints = @($documentation.systemHints) + @($codeInference.systemHints) + @($remoteGitHub.systemHints)
+    $combinedWorkflowHints = @($documentation.workflowHints) + @($codeInference.workflowHints) + @($remoteGitHub.workflowHints)
+    $hasApiSurface =
+        (Test-Path -LiteralPath (Join-Path $BasePath 'api')) -or
+        (Test-Path -LiteralPath (Join-Path $BasePath 'controllers')) -or
+        (Test-Path -LiteralPath (Join-Path $BasePath 'src\API')) -or
+        (Test-Path -LiteralPath (Join-Path $BasePath 'wwwroot')) -or
+        (@($combinedSystemHints | Where-Object { $_ -match 'API|interface surface' }).Count -gt 0)
+
+    $projectType = if (($stackHints -contains 'dotnet') -and ($stackHints -contains 'node')) {
+        'Hybrid .NET + Node project'
+    }
+    elseif (($stackHints -contains 'dotnet') -and $hasApiSurface) {
+        '.NET application with API/web surface'
+    }
+    elseif (@($combinedSystemHints | Where-Object { $_ -eq 'Power Automate flow packaging/import' }).Count -gt 0) {
+        'Power Automate packaging project'
+    }
+    elseif (@($combinedSystemHints | Where-Object { $_ -eq 'Windows Task Scheduler integration' }).Count -gt 0) {
+        'Scheduled automation project'
+    }
+    elseif ($stackHints -contains 'dotnet') {
+        '.NET application'
+    }
+    elseif ($stackHints -contains 'python') {
+        'Python project'
+    }
+    elseif ($stackHints -contains 'node') {
+        'Node project'
+    }
+    elseif ($stackHints -contains 'powershell') {
+        'PowerShell automation project'
+    }
+    elseif ($stackHints -contains 'rust') {
+        'Rust project'
+    }
+    elseif ($stackHints -contains 'go') {
+        'Go project'
+    }
+    else {
+        'General project'
+    }
+
+    $primaryLanguage = if ($stackHints -contains 'dotnet') {
+        'C# / .NET'
+    }
+    elseif ($stackHints -contains 'python') {
+        'Python'
+    }
+    elseif ($stackHints -contains 'node') {
+        'TypeScript / JavaScript'
+    }
+    elseif ($stackHints -contains 'powershell') {
+        'PowerShell'
+    }
+    elseif ($stackHints -contains 'rust') {
+        'Rust'
+    }
+    elseif ($stackHints -contains 'go') {
+        'Go'
+    }
+    else {
+        'Undetermined'
+    }
+
+    $isBlankProject = Test-IsBlankProject -BasePath $BasePath
+    $purpose = if ($documentation.purpose) {
+        $documentation.purpose
+    }
+    elseif ($remoteGitHub.purpose) {
+        $remoteGitHub.purpose
+    }
+    elseif ($codeInference.purpose) {
+        $codeInference.purpose
+    }
+    elseif ($gitContext.repoName) {
+        'Likely project focus inferred from local Git metadata and repository naming: ' + $gitContext.repoName + '.'
+    }
+    else {
+        $null
+    }
+
+    $derivationMode = if ($isBlankProject) {
+        'blank-default'
+    }
+    elseif (@($documentation.sourceFiles).Count -gt 0) {
+        'project-docs'
+    }
+    elseif ($remoteGitHub.success) {
+        'remote-github'
+    }
+    elseif (@($codeInference.sourceFiles).Count -gt 0 -or $gitContext.hasGit) {
+        'code-and-git'
+    }
+    else {
+        'manifest-and-structure'
+    }
+
+    return [pscustomobject]@{
+        manifestFiles = $manifestFiles
+        markdownFiles = $markdownFiles
+        documentation = $documentation
+        codeInference = $codeInference
+        gitContext = $gitContext
+        remoteGitHub = $remoteGitHub
+        stackHints = $stackHints
+        hasApiSurface = $hasApiSurface
+        projectType = $projectType
+        primaryLanguage = $primaryLanguage
+        isBlankProject = $isBlankProject
+        derivationMode = $derivationMode
+        purpose = $purpose
+        systemHints = @($combinedSystemHints | Sort-Object -Unique)
+        workflowHints = @($combinedWorkflowHints | Sort-Object -Unique | Select-Object -First 10)
+        commandHints = @((@($documentation.commandHints) + @($codeInference.commandHints) + @($remoteGitHub.commandHints)) | Sort-Object -Unique)
+    }
+}
+
+function Get-WhitelistCommands {
+    param([object]$Signals)
+
+    $commands = New-Object System.Collections.Generic.List[string]
+
+    if ($Signals.stackHints -contains 'dotnet') {
+        $commands.Add('dotnet build')
+        $commands.Add('dotnet restore')
+        $commands.Add('dotnet test')
+        $commands.Add('dotnet format --verify-no-changes')
+        $commands.Add('dotnet list package')
+        $commands.Add('dotnet tool list')
+    }
+
+    if ($Signals.stackHints -contains 'python') {
+        $commands.Add('python -m pytest')
+        $commands.Add('python -m pip list')
+    }
+
+    if ($Signals.stackHints -contains 'node') {
+        $commands.Add('npm test')
+        $commands.Add('npm run build')
+        $commands.Add('npm run lint')
+        $commands.Add('npm list --depth=0')
+    }
+
+    if ($Signals.stackHints -contains 'powershell') {
+        $commands.Add('Get-ScheduledTask')
+    }
+
+    if ($Signals.stackHints -contains 'rust') {
+        $commands.Add('cargo test')
+        $commands.Add('cargo check')
+    }
+
+    if ($Signals.stackHints -contains 'go') {
+        $commands.Add('go test ./...')
+        $commands.Add('go list ./...')
+    }
+
+    foreach ($command in $Signals.commandHints) {
+        $commands.Add($command)
+    }
+
+    $commands.Add('git status')
+    $commands.Add('git diff')
+    $commands.Add('Get-ChildItem')
+    $commands.Add('Get-Content')
+    $commands.Add('Select-String')
+
+    return @($commands | Sort-Object -Unique)
+}
+
+function Format-BulletLines {
+    param(
+        [string[]]$Items,
+        [string]$DefaultLine = '- None detected'
+    )
+
+    if (@($Items).Count -eq 0) {
+        return $DefaultLine
+    }
+
+    return (@($Items) | ForEach-Object { "- $_" }) -join "`r`n"
+}
+function New-AgentsRulesContent {
+    param(
+        [string]$ProjectName,
+        [string]$RootPath,
+        [object]$Signals,
+        [string[]]$WhitelistCommands
+    )
+
+    $stackLine = Format-BulletLines -Items $Signals.stackHints -DefaultLine '- general'
+    $manifestLine = Format-BulletLines -Items @($Signals.manifestFiles | ForEach-Object { $_.Name })
+    $sourceDocLines = Format-BulletLines -Items $Signals.documentation.sourceFiles
+    $codeSourceLines = Format-BulletLines -Items $Signals.codeInference.sourceFiles
+    $commandLines = Format-BulletLines -Items $WhitelistCommands
+    $systemLines = Format-BulletLines -Items $Signals.systemHints
+    $workflowLines = Format-BulletLines -Items $Signals.workflowHints
+    $purposeLine = if ($Signals.purpose) { $Signals.purpose } else { 'No project-specific purpose was detected yet.' }
+    $gitLines = @()
+    if ($Signals.gitContext.sourceHint) { $gitLines += $Signals.gitContext.sourceHint }
+    if ($Signals.gitContext.repoName) { $gitLines += ('Repository name: ' + $Signals.gitContext.repoName) }
+    if ($Signals.gitContext.remoteUrl) { $gitLines += ('Remote: ' + $Signals.gitContext.remoteUrl) }
+    $gitSectionLines = Format-BulletLines -Items $gitLines
+    $remoteLines = @()
+    if ($Signals.remoteGitHub.enabled) { $remoteLines += $Signals.remoteGitHub.note }
+    if ($Signals.remoteGitHub.source) { $remoteLines += ('Source: ' + $Signals.remoteGitHub.source) }
+    $remoteSectionLines = Format-BulletLines -Items $remoteLines
+    $apiHostSection = if ($Signals.hasApiSurface) {
+@"
+## API Host Rule
+
+Remember to restart the API host or local dev server if route, handler, or API-facing changes need to be reflected live.
+"@
+    }
+    else {
+        ''
+    }
+
+    $derivationNote = switch ($Signals.derivationMode) {
+        'blank-default' { 'This rule set uses the scaffold baseline because the target looked effectively blank before scaffold files were applied.' }
+        'project-docs' { 'This rule set was derived from existing project markdown plus detected manifests and structure.' }
+        'remote-github' { 'This rule set was enriched from the configured GitHub remote and continued gracefully if any remote step failed.' }
+        'code-and-git' { 'This rule set was derived from entry points, filenames, lightweight code comments, and local Git metadata because substantial project docs were not available.' }
+        default { 'This rule set was derived from detected manifests and project structure because no substantial project docs were found.' }
+    }
+
+    return @"
+---
+trigger: always_on
+---
+
+# $ProjectName Agent Rules
+
+## Project Context
+
+- **Type**: $($Signals.projectType)
+- **Root**: ``$RootPath``
+- **Primary language**: $($Signals.primaryLanguage)
+- **Derivation mode**: $($Signals.derivationMode)
+
+## Purpose
+
+$purposeLine
+
+## Rule Source
+
+$derivationNote
+
+## Source Docs
+
+$sourceDocLines
+
+## Code Inference Sources
+
+$codeSourceLines
+
+## Local Git Signals
+
+$gitSectionLines
+
+## Remote GitHub Signals
+
+$remoteSectionLines
+
+## Detected Stack Hints
+
+$stackLine
+
+## Detected Manifests
+
+$manifestLine
+
+## Workflow Hints
+
+$workflowLines
+
+## External Systems / Runtime Notes
+
+$systemLines
+
+## Safe Auto-Run Whitelist
+
+Set safe autorun for the following commands when they match the current workspace and request:
+
+$commandLines
+
+## Operating Defaults
+
+- Prefer small, reviewable changes.
+- Preserve project-owned rules and conventions before applying scaffold defaults.
+- Match existing path and runtime conventions instead of forcing a new layout mid-change.
+- Treat project docs such as `README.md`, plan files, and architecture notes as authoritative inputs for future updates to `.agents`.
+- If docs are missing, use entry points, filenames, comments, and local Git metadata as fallback signals before defaulting to generic rules.
+- Remote GitHub enrichment is best-effort only and must never block scaffold application.
+
+## Quota / Compute Rules
+
+### Default: LOW COMPUTE
+
+- Only analyze the minimum necessary code.
+- Avoid workspace-wide scans unless the user explicitly asks for deeper analysis.
+- Reuse existing reports and context before re-reading large files.
+
+### HIGH COMPUTE triggers (ask first)
+
+Respond with: `"Estimated quota impact: HIGH. Proceed? (yes/no)"` before:
+- Reading many files
+- Generating multi-phase plans
+- Deep debugging across multiple modules
+- Running workspace-wide searches
+
+### ULTRA COMPUTE triggers (ask first)
+
+Respond with: `"Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proceed? (yes/no)"` before:
+- Full codebase analysis
+- Large refactors across multiple files
+- Architectural redesign
+
+$apiHostSection
+"@
+}
+
+function New-WhitelistContent {
+    param([string[]]$WhitelistCommands)
+
+    $commandLines = Format-BulletLines -Items $WhitelistCommands
+
+    return @"
+# Always Auto-Run Whitelisted Commands
+
+When the workspace agent supports command safety flags, mark these commands safe to autorun without additional confirmation.
+This list is derived from project manifests, command examples in markdown docs, lightweight entry-point inference, and optional remote GitHub enrichment.
+
+$commandLines
+"@
+}
+
+function New-QuotaContent {
+    return @"
+---
+trigger: always_on
+---
+
+# Quota Protection Rules
+
+## Default Operating Mode: LOW COMPUTE
+
+- Analyze only the minimum code needed for the task.
+- Prefer incremental implementation over broad planning.
+- Do not repeat large scans or re-read unchanged files without a reason.
+- Reuse project docs and generated context before widening scope.
+
+## HIGH COMPUTE MODE
+
+Ask first with: `"Estimated quota impact: HIGH. Proceed? (yes/no)"`
+
+Use this before:
+- Reading many files
+- Running broad searches
+- Producing multi-step architecture plans
+- Deep debugging across several modules
+
+## ULTRA COMPUTE MODE
+
+Ask first with: `"Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proceed? (yes/no)"`
+
+Use this before:
+- Full repo analysis
+- Large refactors
+- Architectural redesign
+"@
+}
+
+function New-RestartApiContent {
+    return @"
+---
+trigger: always_on
+---
+
+Restart the API host or local dev server when API-facing changes need to be reflected in the running app.
+"@
+}
+
+function Write-AgentFiles {
+    param(
+        [string]$TargetPath,
+        [string]$ProjectName,
+        [switch]$Force,
+        [switch]$UseRemoteGitHubContext
+    )
+
+    $existingRuleFiles = @(Get-AgentRuleFiles -BasePath $TargetPath)
+    $existingRuleState = Get-ExistingAgentRuleState -BasePath $TargetPath -RuleFiles $existingRuleFiles
+    $signals = Get-ProjectSignals -BasePath $TargetPath -UseRemoteGitHubContext:$UseRemoteGitHubContext.IsPresent
+    $whitelistCommands = Get-WhitelistCommands -Signals $signals
+    $outputRoot = switch ($existingRuleState.kind) {
+        'none' { Join-Path $TargetPath '.agents' }
+        'scaffold-direct' { Join-Path $TargetPath '.agents' }
+        'scaffold-sidecar' { Join-Path $TargetPath '.agents\scaffold-generated' }
+        'project-owned' {
+            if ($Force.IsPresent) {
+                Join-Path $TargetPath '.agents'
+            }
+            else {
+                Join-Path $TargetPath '.agents\scaffold-generated'
+            }
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $outputRoot)) {
+        New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
+    }
+
+    $files = @(
+        [pscustomobject]@{
+            path = Join-Path $outputRoot 'rules.md'
+            relative = Get-RelativePath -BasePath $TargetPath -FullPath (Join-Path $outputRoot 'rules.md')
+            content = New-AgentsRulesContent -ProjectName $ProjectName -RootPath $TargetPath -Signals $signals -WhitelistCommands $whitelistCommands
+        },
+        [pscustomobject]@{
+            path = Join-Path $outputRoot 'always-approve-whitelisted-commands.md'
+            relative = Get-RelativePath -BasePath $TargetPath -FullPath (Join-Path $outputRoot 'always-approve-whitelisted-commands.md')
+            content = New-WhitelistContent -WhitelistCommands $whitelistCommands
+        },
+        [pscustomobject]@{
+            path = Join-Path $outputRoot 'quota-drain-prevention.md'
+            relative = Get-RelativePath -BasePath $TargetPath -FullPath (Join-Path $outputRoot 'quota-drain-prevention.md')
+            content = New-QuotaContent
+        }
+    )
+
+    if ($signals.hasApiSurface) {
+        $files += [pscustomobject]@{
+            path = Join-Path $outputRoot 'restart-api-host-as-needed.md'
+            relative = Get-RelativePath -BasePath $TargetPath -FullPath (Join-Path $outputRoot 'restart-api-host-as-needed.md')
+            content = New-RestartApiContent
+        }
+    }
+
+    foreach ($file in $files) {
+        if (-not (Should-CopyFile -DestinationPath $file.path -Overwrite ($Force.IsPresent -or $existingRuleState.kind -like 'scaffold-*'))) {
+            Write-Status "Skipping existing file $($file.relative)"
+            continue
+        }
+
+        Set-Content -LiteralPath $file.path -Value $file.content
+        Write-Status "Wrote $($file.relative)"
+    }
+
+    return [pscustomobject]@{
+        outputRoot = $outputRoot
+        mode = if ($existingRuleState.kind -eq 'project-owned' -and -not $Force.IsPresent) { 'sidecar' } else { 'direct' }
+        stackHints = @($signals.stackHints)
+        hasApiSurface = $signals.hasApiSurface
+        derivationMode = $signals.derivationMode
+        sourceDocs = @($signals.documentation.sourceFiles)
+        projectType = $signals.projectType
+        remoteGitHubEnabled = $signals.remoteGitHub.enabled
+        remoteGitHubSuccess = $signals.remoteGitHub.success
+    }
+}
+
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Split-Path -Parent $scriptRoot
-$templateRoot = Join-Path $repoRoot "scaffold\templates\common"
+$templateRoot = Join-Path $repoRoot 'scaffold\templates\common'
 
 $resolvedTargetPath = (Resolve-Path -LiteralPath $TargetPath).Path
 $resolvedProjectName = Resolve-ProjectName -ResolvedTargetPath $resolvedTargetPath -ExplicitProjectName $ProjectName
-$targetConfigPath = Join-Path $resolvedTargetPath "scaffold.config.json"
+$targetConfigPath = Join-Path $resolvedTargetPath 'scaffold.config.json'
 
 if (-not (Test-Path -LiteralPath $templateRoot)) {
     throw "Template root not found: $templateRoot"
@@ -89,22 +1147,34 @@ $tokens = @{
     PROJECT_NAME = $resolvedProjectName
 }
 
+$agentWriteResult = Write-AgentFiles -TargetPath $resolvedTargetPath -ProjectName $resolvedProjectName -Force:$Force.IsPresent -UseRemoteGitHubContext:$UseRemoteGitHubContext.IsPresent
 Copy-TemplateTree -SourceRoot $templateRoot -DestinationRoot $resolvedTargetPath -Tokens $tokens -Overwrite $Force.IsPresent
 
 if (-not (Test-Path -LiteralPath $targetConfigPath) -or $Force.IsPresent) {
     $config = [ordered]@{
         projectName = $resolvedProjectName
         scaffold = [ordered]@{
-            template = "common"
-            appliedOn = (Get-Date).ToString("yyyy-MM-dd")
+            template = 'common'
+            appliedOn = (Get-Date).ToString('yyyy-MM-dd')
+            agentRules = [ordered]@{
+                mode = $agentWriteResult.mode
+                outputPath = Get-RelativePath -BasePath $resolvedTargetPath -FullPath $agentWriteResult.outputRoot
+                stackHints = @($agentWriteResult.stackHints)
+                hasApiSurface = $agentWriteResult.hasApiSurface
+                derivationMode = $agentWriteResult.derivationMode
+                projectType = $agentWriteResult.projectType
+                sourceDocs = @($agentWriteResult.sourceDocs)
+                remoteGitHubEnabled = $agentWriteResult.remoteGitHubEnabled
+                remoteGitHubSuccess = $agentWriteResult.remoteGitHubSuccess
+            }
         }
-    } | ConvertTo-Json -Depth 4
+    } | ConvertTo-Json -Depth 6
 
     Set-Content -LiteralPath $targetConfigPath -Value $config
-    Write-Status "Wrote scaffold.config.json"
+    Write-Status 'Wrote scaffold.config.json'
 }
 else {
-    Write-Status "Skipping existing file scaffold.config.json"
+    Write-Status 'Skipping existing file scaffold.config.json'
 }
 
 Write-Status "Scaffold application complete for $resolvedProjectName"
