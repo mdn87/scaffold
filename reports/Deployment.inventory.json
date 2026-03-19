@@ -1,0 +1,55 @@
+{
+    "targetPath":  "C:\\Users\\mnewman\\Documents\\Admin\\IT\\EngineerToolkit\\Deployment",
+    "projectName":  "Deployment",
+    "generatedOn":  "2026-03-17 15:30:02",
+    "projectTypeHints":  [
+                             "agent-rules"
+                         ],
+    "recommendation":  "adopt",
+    "structure":  {
+                      "baselineDirectories":  [
+                                                  {
+                                                      "name":  "docs",
+                                                      "exists":  true
+                                                  },
+                                                  {
+                                                      "name":  "src",
+                                                      "exists":  true
+                                                  },
+                                                  {
+                                                      "name":  "tests",
+                                                      "exists":  true
+                                                  }
+                                              ],
+                      "baselineFiles":  [
+                                            {
+                                                "name":  ".gitignore",
+                                                "exists":  true
+                                            },
+                                            {
+                                                "name":  "README.md",
+                                                "exists":  true
+                                            }
+                                        ]
+                  },
+    "ruleFiles":  [
+                      {
+                          "path":  ".agents\\always-approve-whitelisted-commands.md"
+                      },
+                      {
+                          "path":  ".agents\\quota-drain-prevention.md"
+                      },
+                      {
+                          "path":  ".agents\\restart-api-host-as-needed.md"
+                      },
+                      {
+                          "path":  ".agents\\rules.md"
+                      }
+                  ],
+    "manifests":  [
+
+                  ],
+    "likelyInterfaces":  [
+
+                         ]
+}

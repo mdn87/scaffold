@@ -1250,6 +1250,41 @@ Safe auto-run commands are configured in ``.claude/settings.json``. Do not run c
 "@
 }
 
+function New-CodexConfigContent {
+    return @"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+"@
+}
+
+function Register-CodexGlobalTrust {
+    param([string]$TargetPath)
+
+    $globalCodexConfig = Join-Path $env:USERPROFILE '.codex\config.toml'
+
+    if (-not (Test-Path -LiteralPath $globalCodexConfig)) {
+        Write-Status "Global Codex config not found at $globalCodexConfig — skipping trust registration"
+        return
+    }
+
+    # Normalize to forward slashes for TOML key comparison (Codex uses Windows paths with single quotes)
+    $escapedPath = $TargetPath.Replace("'", "''")
+    $sectionHeader = "[projects.'$escapedPath']"
+    $trustLine = 'trust_level = "trusted"'
+
+    $content = Get-Content -LiteralPath $globalCodexConfig -Raw
+
+    if ($content -match [regex]::Escape($sectionHeader)) {
+        Write-Status "Global Codex trust entry already present for $TargetPath"
+        return
+    }
+
+    # Append the new project trust block
+    $block = "`n$sectionHeader`n$trustLine`n"
+    Add-Content -LiteralPath $globalCodexConfig -Value $block
+    Write-Status "Registered Codex global trust for $TargetPath"
+}
+
 function New-ClaudeSettingsContent {
     param([string[]]$ClaudePermissions)
 
@@ -1447,6 +1482,20 @@ function Write-AgentFiles {
         Write-Status "Skipping existing file $claudeSettingsRelative"
     }
 
+    $codexDir = Join-Path $TargetPath '.codex'
+    if (-not (Test-Path -LiteralPath $codexDir)) {
+        New-Item -ItemType Directory -Path $codexDir -Force | Out-Null
+    }
+    $codexConfigPath = Join-Path $codexDir 'config.toml'
+    $codexConfigRelative = Get-RelativePath -BasePath $TargetPath -FullPath $codexConfigPath
+    if (Should-CopyFile -DestinationPath $codexConfigPath -Overwrite ($Force.IsPresent -or $existingRuleState.kind -like 'scaffold-*')) {
+        Set-Content -LiteralPath $codexConfigPath -Value (New-CodexConfigContent)
+        Write-Status "Wrote $codexConfigRelative"
+    }
+    else {
+        Write-Status "Skipping existing file $codexConfigRelative"
+    }
+
     return [pscustomobject]@{
         outputRoot = $outputRoot
         mode = if ($existingRuleState.kind -eq 'project-owned' -and -not $Force.IsPresent) { 'sidecar' } else { 'direct' }
@@ -1478,6 +1527,7 @@ $tokens = @{
 
 $gitSetup = Invoke-GitSetup -BasePath $resolvedTargetPath -ProjectName $resolvedProjectName
 $agentWriteResult = Write-AgentFiles -TargetPath $resolvedTargetPath -ProjectName $resolvedProjectName -Force:$Force.IsPresent -UseRemoteGitHubContext:$UseRemoteGitHubContext.IsPresent
+Register-CodexGlobalTrust -TargetPath $resolvedTargetPath
 Copy-TemplateTree -SourceRoot $templateRoot -DestinationRoot $resolvedTargetPath -Tokens $tokens -Overwrite $Force.IsPresent
 
 if (-not (Test-Path -LiteralPath $targetConfigPath) -or $Force.IsPresent) {

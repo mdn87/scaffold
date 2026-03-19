@@ -1,0 +1,71 @@
+{
+    "targetPath":  "C:\\Users\\mnewman\\Documents\\Admin\\IT\\EngineerToolkit\\Deployment",
+    "projectName":  "Deployment",
+    "generatedOn":  "2026-03-17 15:30:02",
+    "basedOn":  {
+                    "inventory":  "Deployment.inventory.json",
+                    "migrationMap":  "Deployment.migration-map.json"
+                },
+    "summary":  {
+                    "projectKind":  "General project",
+                    "purpose":  "First-pass architecture context generated from scaffold inventory and migration map.",
+                    "recommendation":  "adopt"
+                },
+    "scaffoldStance":  {
+                           "rules":  "preserve",
+                           "structure":  "adopt",
+                           "interfaces":  "adopt",
+                           "dependencies":  "adopt"
+                       },
+    "subsystems":  [
+
+                   ],
+    "authoritativeRules":  [
+                               {
+                                   "path":  ".agents\\always-approve-whitelisted-commands.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\quota-drain-prevention.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\restart-api-host-as-needed.md",
+                                   "action":  "preserve"
+                               },
+                               {
+                                   "path":  ".agents\\rules.md",
+                                   "action":  "preserve"
+                               }
+                           ],
+    "ruleHighlights":  [
+                           "Honor low-compute defaults unless the user explicitly asks for deeper analysis.",
+                           "Restart the API host when changes need to be reflected in the visualizer/API layer."
+                       ],
+    "manifests":  [
+
+                  ],
+    "baseline":  {
+                     "adopt":  [
+                                   "dir:docs",
+                                   "dir:src",
+                                   "dir:tests",
+                                   "file:.gitignore",
+                                   "file:README.md"
+                               ],
+                     "map":  [
+
+                             ],
+                     "keep":  [
+
+                              ]
+                 },
+    "interfaceGroups":  [
+
+                        ],
+    "nextArtifacts":  [
+                          "Rule classification report consolidating .agent and .agents guidance.",
+                          "Explicit interface map with grouped endpoints and owning modules.",
+                          "Project-specific implementation plan that preserves the existing architecture."
+                      ]
+}
