@@ -1,0 +1,46 @@
+{
+  "targetPath": "C:\\Users\\Matt\\Desktop\\MyDocs\\pavilion",
+  "projectName": "pavilion",
+  "generatedOn": "2026-03-18 22:55:00",
+  "basedOnInventory": "pavilion.inventory.json",
+  "recommendation": "adopt",
+  "decisions": {
+    "rules": "preserve",
+    "structure": "adopt",
+    "interfaces": "adopt",
+    "dependencies": "adopt"
+  },
+  "baseline": {
+    "adopt": [
+      "dir:docs",
+      "dir:src",
+      "dir:tests",
+      "file:.gitignore",
+      "file:README.md"
+    ],
+    "map": [],
+    "keep": []
+  },
+  "ruleFiles": [
+    {
+      "path": ".agents\\always-approve-whitelisted-commands.md",
+      "action": "preserve"
+    },
+    {
+      "path": ".agents\\quota-drain-prevention.md",
+      "action": "preserve"
+    },
+    {
+      "path": ".agents\\rules.md",
+      "action": "preserve"
+    }
+  ],
+  "manifests": [],
+  "interfaces": [],
+  "safeFirstSlice": null,
+  "nextSteps": [
+    "Review scaffold-managed files before applying structural changes.",
+    "Confirm preserve/merge decisions for any agent rules.",
+    "Translate detected interfaces into explicit architecture context."
+  ]
+}

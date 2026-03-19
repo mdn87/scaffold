@@ -1,0 +1,48 @@
+{
+  "targetPath": "C:\\Users\\Matt\\Desktop\\MyDocs\\pavilion",
+  "projectName": "pavilion",
+  "generatedOn": "2026-03-18 22:55:00",
+  "projectTypeHints": [
+    "agent-rules"
+  ],
+  "recommendation": "adopt",
+  "structure": {
+    "baselineDirectories": [
+      {
+        "name": "docs",
+        "exists": true
+      },
+      {
+        "name": "src",
+        "exists": true
+      },
+      {
+        "name": "tests",
+        "exists": true
+      }
+    ],
+    "baselineFiles": [
+      {
+        "name": ".gitignore",
+        "exists": true
+      },
+      {
+        "name": "README.md",
+        "exists": true
+      }
+    ]
+  },
+  "ruleFiles": [
+    {
+      "path": ".agents\\always-approve-whitelisted-commands.md"
+    },
+    {
+      "path": ".agents\\quota-drain-prevention.md"
+    },
+    {
+      "path": ".agents\\rules.md"
+    }
+  ],
+  "manifests": [],
+  "likelyInterfaces": []
+}
