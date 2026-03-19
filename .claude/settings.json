@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+    "Bash(brew info:*)",
+    "Bash(brew list:*)",
+    "Bash(cat:*)",
+    "Bash(curl:*)",
+    "Bash(dotnet build:*)",
+    "Bash(dotnet format:*)",
+    "Bash(dotnet list package:*)",
+    "Bash(dotnet restore:*)",
+    "Bash(dotnet run:*)",
+    "Bash(dotnet test:*)",
+    "Bash(dotnet tool list:*)",
+    "Bash(echo:*)",
+    "Bash(env:*)",
+    "Bash(git diff:*)",
+    "Bash(git log:*)",
+    "Bash(git status:*)",
+    "Bash(ls:*)",
+    "Bash(which:*)"
+    ],
+    "deny": []
+  }
+}

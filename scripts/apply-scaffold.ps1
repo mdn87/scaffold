@@ -1135,6 +1135,138 @@ Restart the API host or local dev server when API-facing changes need to be refl
 "@
 }
 
+function ConvertTo-ClaudePermissions {
+    param([string[]]$WhitelistCommands)
+
+    # Commands that are PowerShell-native and have no Bash equivalent
+    $psOnlyPrefixes = @('Get-', 'Select-', 'Set-', 'New-', 'Remove-', 'Invoke-', 'Write-', 'Read-', 'Format-', 'Out-')
+
+    # Bare shell interpreters — too broad to whitelist safely in Claude
+    $skipExact = @('bash', 'sh', 'zsh', 'pwsh', 'powershell')
+
+    $permissions = New-Object System.Collections.Generic.List[string]
+
+    foreach ($cmd in $WhitelistCommands) {
+        $trimmed = $cmd.Trim()
+        if (-not $trimmed) { continue }
+
+        # Skip PowerShell cmdlets
+        $isPs = $false
+        foreach ($prefix in $psOnlyPrefixes) {
+            if ($trimmed.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $isPs = $true
+                break
+            }
+        }
+        if ($isPs) { continue }
+
+        # Skip bare interpreters
+        if ($skipExact -contains $trimmed.ToLowerInvariant()) { continue }
+
+        # Build a meaningful prefix: take up to 3 tokens, dropping flag tokens (starting with -)
+        $tokens = $trimmed -split '\s+' | Where-Object { $_ -and -not $_.StartsWith('-') }
+        $prefix = ($tokens | Select-Object -First 3) -join ' '
+
+        if ($prefix) {
+            $permissions.Add("Bash($prefix`:*)")
+        }
+    }
+
+    return @($permissions | Sort-Object -Unique)
+}
+
+function New-ClaudeMdContent {
+    param(
+        [string]$ProjectName,
+        [string]$RootPath,
+        [object]$Signals
+    )
+
+    $stackLine = if ($Signals.stackHints.Count -gt 0) { $Signals.stackHints -join ', ' } else { 'general' }
+    $purposeLine = if ($Signals.purpose) { $Signals.purpose } else { 'No project-specific purpose detected yet.' }
+
+    $commandLines = Format-BulletLines -Items $Signals.commandHints -DefaultLine '- None detected'
+    $workflowLines = Format-BulletLines -Items $Signals.workflowHints -DefaultLine '- None detected'
+
+    return @"
+# $ProjectName
+
+## Project
+
+- **Type**: $($Signals.projectType)
+- **Stack**: $stackLine
+- **Root**: ``$RootPath``
+
+## Purpose
+
+$purposeLine
+
+## Key Commands
+
+$commandLines
+
+## Workflow Notes
+
+$workflowLines
+
+## Operating Rules
+
+- Use the Read tool to read files — do not use ``cat`` or ``head`` via Bash.
+- Search with Grep and Glob tools, not ``grep`` or ``find`` via Bash.
+- Use the Edit tool for targeted changes; Write only for new files or full rewrites.
+- Read and understand existing code before suggesting modifications.
+- Prefer small, reviewable changes over large rewrites.
+- Match existing path, naming, and runtime conventions.
+- Treat README.md, plan files, and architecture docs as authoritative project context.
+- Do not add features, comments, or error handling beyond what was asked.
+
+## Compute Budget
+
+### Default: LOW
+
+- Read only the files necessary for the task.
+- Reuse loaded context before fetching more.
+- Do not scan the whole workspace unless explicitly asked.
+
+### HIGH — confirm first
+
+Say: ``Estimated quota impact: HIGH. Proceed? (yes/no)`` before:
+
+- Reading many files across the project
+- Running broad workspace searches
+- Generating multi-step plans
+
+### ULTRA — confirm first
+
+Say: ``Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proceed? (yes/no)`` before:
+
+- Full codebase analysis
+- Large refactors spanning many files
+- Architectural redesign
+
+## Permissions
+
+Safe auto-run commands are configured in ``.claude/settings.json``. Do not run commands outside that list without confirming with the user first.
+"@
+}
+
+function New-ClaudeSettingsContent {
+    param([string[]]$ClaudePermissions)
+
+    $allowArray = ($ClaudePermissions | ForEach-Object { "    `"$_`"" }) -join ",`n"
+
+    return @"
+{
+  "permissions": {
+    "allow": [
+$allowArray
+    ],
+    "deny": []
+  }
+}
+"@
+}
+
 function Invoke-GitSetup {
     param(
         [string]$BasePath,
@@ -1180,7 +1312,7 @@ function Invoke-GitSetup {
 
     if ($ctx.hasGit -and -not $ctx.remoteUrl -and $ghAvailable) {
         Write-Status "Creating private GitHub repository '$ProjectName'..."
-        & gh repo create $ProjectName --private --source=$BasePath --remote=origin
+        & gh repo create $ProjectName --private --source=$BasePath --remote=origin | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Status "GitHub repository created and linked as origin"
             $result.didAddRemote = $true
@@ -1286,6 +1418,33 @@ function Write-AgentFiles {
 
         Set-Content -LiteralPath $file.path -Value $file.content
         Write-Status "Wrote $($file.relative)"
+    }
+
+    # Claude Code parallel output: CLAUDE.md + .claude/settings.json
+    $claudePermissions = @(ConvertTo-ClaudePermissions -WhitelistCommands $whitelistCommands)
+
+    $claudeMdPath = Join-Path $TargetPath 'CLAUDE.md'
+    $claudeMdRelative = Get-RelativePath -BasePath $TargetPath -FullPath $claudeMdPath
+    if (Should-CopyFile -DestinationPath $claudeMdPath -Overwrite ($Force.IsPresent -or $existingRuleState.kind -like 'scaffold-*')) {
+        Set-Content -LiteralPath $claudeMdPath -Value (New-ClaudeMdContent -ProjectName $ProjectName -RootPath $TargetPath -Signals $signals)
+        Write-Status "Wrote $claudeMdRelative"
+    }
+    else {
+        Write-Status "Skipping existing file $claudeMdRelative"
+    }
+
+    $claudeDir = Join-Path $TargetPath '.claude'
+    if (-not (Test-Path -LiteralPath $claudeDir)) {
+        New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
+    }
+    $claudeSettingsPath = Join-Path $claudeDir 'settings.json'
+    $claudeSettingsRelative = Get-RelativePath -BasePath $TargetPath -FullPath $claudeSettingsPath
+    if (Should-CopyFile -DestinationPath $claudeSettingsPath -Overwrite ($Force.IsPresent -or $existingRuleState.kind -like 'scaffold-*')) {
+        Set-Content -LiteralPath $claudeSettingsPath -Value (New-ClaudeSettingsContent -ClaudePermissions $claudePermissions)
+        Write-Status "Wrote $claudeSettingsRelative"
+    }
+    else {
+        Write-Status "Skipping existing file $claudeSettingsRelative"
     }
 
     return [pscustomobject]@{

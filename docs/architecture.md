@@ -7,6 +7,7 @@
 ## Purpose
 
 Describe the problem this project solves and the intended users.
+Use `docs/project-brief.md` as the source of truth for the first draft.
 
 ## Boundaries
 

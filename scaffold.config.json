@@ -1,7 +1,31 @@
 {
-    "projectName":  "scaffold",
-    "scaffold":  {
-                     "template":  "common",
-                     "appliedOn":  "2026-03-13"
-                 }
+  "projectName": "scaffold",
+  "scaffold": {
+    "template": "common",
+    "appliedOn": "2026-03-19",
+    "agentRules": {
+      "mode": "direct",
+      "outputPath": "/.agents",
+      "stackHints": [
+        "dotnet"
+      ],
+      "hasApiSurface": true,
+      "derivationMode": "project-docs",
+      "projectType": ".NET application with API/web surface",
+      "sourceDocs": [
+        "/README.md",
+        "/scaffold/templates/common/README.md",
+        "/initial-plan.md",
+        "/docs/architecture.md",
+        "/reports/codelink.architecture-context.md",
+        "/reports/ollama.architecture-context.md",
+        "/reports/pavilion.architecture-context.md",
+        "/reports/SpecRebuilder_v0.2.architecture-context.md",
+        "/reports/SpecRebuilder_v0.2.interface-map.md",
+        "/reports/SpecRebuilder_v0.2.inventory.md"
+      ],
+      "remoteGitHubEnabled": false,
+      "remoteGitHubSuccess": false
+    }
+  }
 }
