@@ -12,4 +12,5 @@ This project was initialized with the shared scaffold.
 
 - Keep documentation close to the codebase.
 - Prefer small, reviewable changes.
+- Fill out `docs/project-brief.md` and `docs/architecture.md` before locking in stack-specific tooling.
 - Add stack-specific setup once the project direction is confirmed.

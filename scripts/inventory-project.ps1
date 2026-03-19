@@ -180,7 +180,7 @@ function Get-Recommendation {
         [object[]]$EndpointLines
     )
 
-    $hasBaseline = ($Structure.baselineDirectories | Where-Object { $_.exists }).Count -ge 2
+    $hasBaseline = @($Structure.baselineDirectories | Where-Object { $_.exists }).Count -ge 2
     $hasComplexSurface = @($EndpointLines).Count -gt 5 -or $ProjectTypeHints -contains "static-web-assets"
     $hasRules = @($RuleFiles).Count -gt 0
 

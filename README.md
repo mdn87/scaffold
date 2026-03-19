@@ -66,6 +66,55 @@ Actions:
 - `apply` applies the baseline directly
 - `activate` generates inventory, migration map, architecture context, and risk ledger, then applies only when the recommendation is `adopt`
 
+## Brand-New Projects From A Description
+
+Yes, with one important caveat: the scaffold already uses project markdown as a first-class input, but until now that flow was implicit rather than documented as a formal intake step.
+
+For a brand-new project, the intended path is:
+
+1. Create a short project brief in markdown.
+2. Capture the initial architecture and boundaries.
+3. Let scaffold derive its first-pass context and baseline from those docs.
+
+The current scaffold prioritizes markdown context in this order:
+
+- `README.md`
+- `plan*.md`
+- architecture, design, or spec documents such as `docs/architecture.md`
+
+If those docs are missing, scaffold falls back to code, manifests, filenames, and Git metadata. For effectively blank folders, that means you will get the generic baseline.
+
+Recommended minimum inputs for a new idea:
+
+- a one-paragraph purpose statement
+- intended users or operators
+- core workflows and capabilities
+- constraints, risks, and unknowns
+- hardware, runtime, or external-system dependencies
+
+Suggested workflow for a fresh folder:
+
+```powershell
+New-Item -ItemType Directory C:\Users\Matt\Desktop\MyDocs\pavilion -Force
+Set-Location C:\Users\Matt\Desktop\MyDocs\pavilion
+```
+
+Write the project brief and architecture notes first, then run:
+
+```powershell
+C:\Users\Matt\Desktop\MyDocs\scaffold\scripts\invoke-scaffold.ps1 -TargetPath C:\Users\Matt\Desktop\MyDocs\pavilion -Action activate
+```
+
+For your `pavilion` idea, the brief should describe things like:
+
+- local LLM host on repurposed laptop
+- Cloudflare Tunnel for remote access
+- Open WebUI as the primary interface
+- possible Arduino and 3D printer workflows
+- hardware validation still pending from HBCD PE diagnostics
+
+That is enough for scaffold to generate a much more useful first-pass `README`, `docs/architecture.md`, and `.agents/` context than a blank-folder apply.
+
 Artifacts generated in `reports/`:
 
 - `*.inventory.json`
