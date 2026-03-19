@@ -1052,6 +1052,90 @@ Restart the API host or local dev server when API-facing changes need to be refl
 "@
 }
 
+function Invoke-GitSetup {
+    param(
+        [string]$BasePath,
+        [string]$ProjectName
+    )
+
+    $result = [pscustomobject]@{ didInit = $false; didAddRemote = $false }
+
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Status "git not found in PATH — skipping git setup"
+        return $result
+    }
+
+    $ctx = Get-GitContext -BasePath $BasePath
+
+    if (-not $ctx.hasGit) {
+        $answer = Read-Host "[scaffold] No git repository found — initialize one? [y/N]"
+        if ($answer -match '^[Yy]') {
+            & git -C $BasePath init | Out-Null
+            Write-Status "Initialized git repository"
+            $result.didInit = $true
+            $ctx = Get-GitContext -BasePath $BasePath
+        }
+    }
+
+    if ($ctx.hasGit -and -not $ctx.remoteUrl) {
+        if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+            Write-Status "No GitHub remote configured. Install the gh CLI to enable automatic GitHub setup."
+        }
+        else {
+            $answer = Read-Host "[scaffold] No GitHub remote — create a GitHub.com repository? [y/N]"
+            if ($answer -match '^[Yy]') {
+                $defaultName = $ProjectName
+                $repoName = Read-Host "[scaffold] Repository name (default: $defaultName)"
+                if (-not $repoName) { $repoName = $defaultName }
+
+                $visAnswer = Read-Host "[scaffold] Visibility? [private/public] (default: private)"
+                $visFlag = if ($visAnswer -imatch '^pub') { '--public' } else { '--private' }
+
+                Write-Status "Creating GitHub repository '$repoName'..."
+                & gh repo create $repoName $visFlag --source=$BasePath --remote=origin
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Status "GitHub repository created and linked as origin"
+                    $result.didAddRemote = $true
+                }
+                else {
+                    Write-Status "GitHub repository creation failed — continuing without remote"
+                }
+            }
+        }
+    }
+
+    return $result
+}
+
+function Invoke-InitialCommit {
+    param(
+        [string]$BasePath,
+        [bool]$DidInit
+    )
+
+    if (-not $DidInit) { return }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return }
+
+    $hasCommits = & git -C $BasePath log --oneline -1 2>$null
+    if ($hasCommits) { return }
+
+    $answer = Read-Host "[scaffold] Make an initial commit with scaffold files? [y/N]"
+    if ($answer -notmatch '^[Yy]') { return }
+
+    & git -C $BasePath add -A
+    & git -C $BasePath commit -m "chore: initial scaffold"
+    Write-Status "Initial commit created"
+
+    $ctx = Get-GitContext -BasePath $BasePath
+    if ($ctx.remoteUrl) {
+        $pushAnswer = Read-Host "[scaffold] Push to origin? [y/N]"
+        if ($pushAnswer -match '^[Yy]') {
+            & git -C $BasePath push -u origin HEAD
+            Write-Status "Pushed to origin"
+        }
+    }
+}
+
 function Write-AgentFiles {
     param(
         [string]$TargetPath,
@@ -1147,6 +1231,7 @@ $tokens = @{
     PROJECT_NAME = $resolvedProjectName
 }
 
+$gitSetup = Invoke-GitSetup -BasePath $resolvedTargetPath -ProjectName $resolvedProjectName
 $agentWriteResult = Write-AgentFiles -TargetPath $resolvedTargetPath -ProjectName $resolvedProjectName -Force:$Force.IsPresent -UseRemoteGitHubContext:$UseRemoteGitHubContext.IsPresent
 Copy-TemplateTree -SourceRoot $templateRoot -DestinationRoot $resolvedTargetPath -Tokens $tokens -Overwrite $Force.IsPresent
 
@@ -1178,3 +1263,4 @@ else {
 }
 
 Write-Status "Scaffold application complete for $resolvedProjectName"
+Invoke-InitialCommit -BasePath $resolvedTargetPath -DidInit $gitSetup.didInit
