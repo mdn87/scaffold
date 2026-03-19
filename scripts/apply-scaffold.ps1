@@ -655,6 +655,14 @@ function Get-ProjectSignals {
             '*.sln' { $stackHints.Add('dotnet') }
             'Cargo.toml' { $stackHints.Add('rust') }
             'go.mod' { $stackHints.Add('go') }
+            'Brewfile' { $stackHints.Add('macos') }
+            '*.sh' { $stackHints.Add('bash') }
+            '.bashrc' { $stackHints.Add('bash') }
+            '.zshrc' { $stackHints.Add('bash') }
+            'Makefile' { $stackHints.Add('shell') }
+            'Dockerfile' { $stackHints.Add('shell') }
+            'docker-compose.yml' { $stackHints.Add('shell') }
+            'docker-compose.yaml' { $stackHints.Add('shell') }
         }
     }
 
@@ -665,6 +673,12 @@ function Get-ProjectSignals {
         if ($command -match '^cargo(\s|$)') { $stackHints.Add('rust') }
         if ($command -match '^go(\s|$)') { $stackHints.Add('go') }
         if ($command -match '\.ps1(\s|$)') { $stackHints.Add('powershell') }
+        if ($command -match '^(bash|sh|zsh)(\s|$)' -or $command -match '\.sh(\s|$)') { $stackHints.Add('bash') }
+        if ($command -match '^brew(\s|$)') { $stackHints.Add('macos') }
+        if ($command -match '^(apt-get|apt|yum|dnf|pacman)(\s|$)') { $stackHints.Add('linux') }
+        if ($command -match '^(launchctl|launchd|systemctl|service)(\s|$)') { $stackHints.Add('shell') }
+        if ($command -match '^(docker|docker-compose|kubectl)(\s|$)') { $stackHints.Add('shell') }
+        if ($command -match '^(curl|wget)(\s|$)') { $stackHints.Add('shell') }
     }
 
     $stackHints = @($stackHints | Sort-Object -Unique)
@@ -707,6 +721,18 @@ function Get-ProjectSignals {
     elseif ($stackHints -contains 'go') {
         'Go project'
     }
+    elseif ($stackHints -contains 'macos') {
+        'macOS shell / automation project'
+    }
+    elseif ($stackHints -contains 'linux') {
+        'Linux shell / automation project'
+    }
+    elseif ($stackHints -contains 'bash') {
+        'Shell scripting project'
+    }
+    elseif ($stackHints -contains 'shell') {
+        'Shell / DevOps automation project'
+    }
     else {
         'General project'
     }
@@ -728,6 +754,18 @@ function Get-ProjectSignals {
     }
     elseif ($stackHints -contains 'go') {
         'Go'
+    }
+    elseif ($stackHints -contains 'macos') {
+        'Bash / Zsh (macOS)'
+    }
+    elseif ($stackHints -contains 'linux') {
+        'Bash / Shell (Linux)'
+    }
+    elseif ($stackHints -contains 'bash') {
+        'Bash / Shell'
+    }
+    elseif ($stackHints -contains 'shell') {
+        'Shell / DevOps scripting'
     }
     else {
         'Undetermined'
@@ -826,12 +864,57 @@ function Get-WhitelistCommands {
         $commands.Add('go list ./...')
     }
 
+    if ($Signals.stackHints -contains 'linux' -or $Signals.stackHints -contains 'macos' -or $Signals.stackHints -contains 'bash' -or $Signals.stackHints -contains 'shell') {
+        $commands.Add('bash')
+        $commands.Add('sh')
+        $commands.Add('zsh')
+        $commands.Add('brew install')
+        $commands.Add('brew update')
+        $commands.Add('brew upgrade')
+        $commands.Add('brew list')
+        $commands.Add('brew info')
+        $commands.Add('brew services list')
+        $commands.Add('apt-get install')
+        $commands.Add('apt list --installed')
+        $commands.Add('systemctl status')
+        $commands.Add('systemctl list-units')
+        $commands.Add('launchctl list')
+        $commands.Add('curl')
+        $commands.Add('wget')
+        $commands.Add('chmod')
+        $commands.Add('chown')
+        $commands.Add('ln -s')
+        $commands.Add('which')
+        $commands.Add('env')
+        $commands.Add('echo')
+        $commands.Add('cat')
+        $commands.Add('ls -la')
+        $commands.Add('ps aux')
+        $commands.Add('df -h')
+        $commands.Add('du -sh')
+        $commands.Add('top -l 1')
+        $commands.Add('uname -a')
+        $commands.Add('whoami')
+    }
+
     foreach ($command in $Signals.commandHints) {
         $commands.Add($command)
     }
 
     $commands.Add('git status')
     $commands.Add('git diff')
+    $commands.Add('git log --oneline')
+    $commands.Add('bash')
+    $commands.Add('sh')
+    $commands.Add('cat')
+    $commands.Add('ls')
+    $commands.Add('ls -la')
+    $commands.Add('echo')
+    $commands.Add('which')
+    $commands.Add('env')
+    $commands.Add('brew list')
+    $commands.Add('brew info')
+    $commands.Add('curl')
     $commands.Add('Get-ChildItem')
     $commands.Add('Get-Content')
     $commands.Add('Select-String')

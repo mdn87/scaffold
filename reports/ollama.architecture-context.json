@@ -1,0 +1,35 @@
+{
+  "targetPath": "/Users/matthewnewman/Documents/MyCode/ollama",
+  "projectName": "ollama",
+  "generatedOn": "2026-03-19 01:38:58",
+  "basedOn": {
+    "inventory": "ollama.inventory.json",
+    "migrationMap": "ollama.migration-map.json"
+  },
+  "summary": {
+    "projectKind": "General project",
+    "purpose": "First-pass architecture context generated from scaffold inventory and migration map.",
+    "recommendation": "adopt"
+  },
+  "scaffoldStance": {
+    "rules": "derive",
+    "structure": "adopt",
+    "interfaces": "adopt",
+    "dependencies": "adopt"
+  },
+  "subsystems": [],
+  "authoritativeRules": [],
+  "ruleHighlights": [],
+  "manifests": [],
+  "baseline": {
+    "adopt": [],
+    "map": [],
+    "keep": []
+  },
+  "interfaceGroups": [],
+  "nextArtifacts": [
+    "Rule classification report consolidating .agent and .agents guidance.",
+    "Explicit interface map with grouped endpoints and owning modules.",
+    "Project-specific implementation plan that preserves the existing architecture."
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "targetPath": "/Users/matthewnewman/Documents/MyCode/ollama",
+  "projectName": "ollama",
+  "generatedOn": "2026-03-19 01:38:58",
+  "basedOnInventory": "ollama.inventory.json",
+  "recommendation": "adopt",
+  "decisions": {
+    "rules": "derive",
+    "structure": "adopt",
+    "interfaces": "adopt",
+    "dependencies": "adopt"
+  },
+  "baseline": {
+    "adopt": [],
+    "map": [],
+    "keep": []
+  },
+  "ruleFiles": [],
+  "manifests": [],
+  "interfaces": [],
+  "safeFirstSlice": null,
+  "nextSteps": [
+    "Review scaffold-managed files before applying structural changes.",
+    "Confirm preserve/merge decisions for any agent rules.",
+    "Translate detected interfaces into explicit architecture context."
+  ]
+}

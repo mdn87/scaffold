@@ -1,0 +1,36 @@
+{
+  "targetPath": "/Users/matthewnewman/Documents/MyCode/ollama",
+  "projectName": "ollama",
+  "generatedOn": "2026-03-19 01:38:57",
+  "projectTypeHints": [],
+  "recommendation": "adopt",
+  "structure": {
+    "baselineDirectories": [
+      {
+        "name": "docs",
+        "exists": false
+      },
+      {
+        "name": "src",
+        "exists": false
+      },
+      {
+        "name": "tests",
+        "exists": false
+      }
+    ],
+    "baselineFiles": [
+      {
+        "name": ".gitignore",
+        "exists": false
+      },
+      {
+        "name": "README.md",
+        "exists": false
+      }
+    ]
+  },
+  "ruleFiles": [],
+  "manifests": [],
+  "likelyInterfaces": []
+}
