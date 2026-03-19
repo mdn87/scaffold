@@ -64,7 +64,7 @@ function Copy-TemplateTree {
         [bool]$Overwrite
     )
 
-    $files = Get-ChildItem -LiteralPath $SourceRoot -Recurse -File
+    $files = Get-ChildItem -LiteralPath $SourceRoot -Recurse -File -Force
 
     foreach ($file in $files) {
         $relativePath = $file.FullName.Substring($SourceRoot.Length).TrimStart("\")
@@ -1149,41 +1149,44 @@ function Invoke-GitSetup {
     }
 
     $ctx = Get-GitContext -BasePath $BasePath
+    $needsInit = -not $ctx.hasGit
+    $ghAvailable = $null -ne (Get-Command gh -ErrorAction SilentlyContinue)
+    $needsRemote = $ctx.hasGit -and -not $ctx.remoteUrl
 
-    if (-not $ctx.hasGit) {
-        $answer = Read-Host "[scaffold] No git repository found — initialize one? [y/N]"
-        if ($answer -match '^[Yy]') {
-            & git -C $BasePath init | Out-Null
-            Write-Status "Initialized git repository"
-            $result.didInit = $true
-            $ctx = Get-GitContext -BasePath $BasePath
+    # Determine what we'd do and show a single confirmation
+    if ($needsInit -or $needsRemote) {
+        $plan = @()
+        if ($needsInit) { $plan += "init git repo" }
+        if ($needsInit -and $ghAvailable) { $plan += "create private GitHub repo '$ProjectName'" }
+        elseif ($needsRemote -and $ghAvailable) { $plan += "create private GitHub repo '$ProjectName' and link as origin" }
+        elseif ($needsInit -and -not $ghAvailable) { $plan += "note: install gh CLI to also create GitHub repo" }
+
+        $planStr = $plan -join ", "
+        $answer = Read-Host "[scaffold] $planStr — proceed? [Y/n]"
+        if ($answer -match '^[Nn]') {
+            return $result
         }
     }
+    else {
+        return $result
+    }
 
-    if ($ctx.hasGit -and -not $ctx.remoteUrl) {
-        if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-            Write-Status "No GitHub remote configured. Install the gh CLI to enable automatic GitHub setup."
+    if ($needsInit) {
+        & git -C $BasePath init | Out-Null
+        Write-Status "Initialized git repository"
+        $result.didInit = $true
+        $ctx = Get-GitContext -BasePath $BasePath
+    }
+
+    if ($ctx.hasGit -and -not $ctx.remoteUrl -and $ghAvailable) {
+        Write-Status "Creating private GitHub repository '$ProjectName'..."
+        & gh repo create $ProjectName --private --source=$BasePath --remote=origin
+        if ($LASTEXITCODE -eq 0) {
+            Write-Status "GitHub repository created and linked as origin"
+            $result.didAddRemote = $true
         }
         else {
-            $answer = Read-Host "[scaffold] No GitHub remote — create a GitHub.com repository? [y/N]"
-            if ($answer -match '^[Yy]') {
-                $defaultName = $ProjectName
-                $repoName = Read-Host "[scaffold] Repository name (default: $defaultName)"
-                if (-not $repoName) { $repoName = $defaultName }
-
-                $visAnswer = Read-Host "[scaffold] Visibility? [private/public] (default: private)"
-                $visFlag = if ($visAnswer -imatch '^pub') { '--public' } else { '--private' }
-
-                Write-Status "Creating GitHub repository '$repoName'..."
-                & gh repo create $repoName $visFlag --source=$BasePath --remote=origin
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Status "GitHub repository created and linked as origin"
-                    $result.didAddRemote = $true
-                }
-                else {
-                    Write-Status "GitHub repository creation failed — continuing without remote"
-                }
-            }
+            Write-Status "GitHub repository creation failed — continuing without remote"
         }
     }
 
