@@ -1,0 +1,130 @@
+{
+  "targetPath": "/Users/matthewnewman/Documents/MyCode/lugos/genai-mcp",
+  "projectName": "genai-mcp",
+  "generatedOn": "2026-03-20 17:47:38",
+  "basedOn": {
+    "architectureContext": "genai-mcp.architecture-context.json",
+    "migrationMap": "genai-mcp.migration-map.json",
+    "interfaceMap": null
+  },
+  "summary": {
+    "currentPassBreakageRisk": "low",
+    "rationale": "The completed scaffold work generated analysis artifacts and skipped baseline application for the mapped project, so runtime code paths were not modified.",
+    "nextChangeRisk": {
+      "currentScaffoldPass": "low",
+      "futureStructuralRefactor": "high",
+      "futureEndpointRefactor": "high",
+      "futureRuleConsolidation": "medium"
+    }
+  },
+  "riskItems": [
+    {
+      "area": "Word COM analysis and document mutation",
+      "level": "high",
+      "likelihood": "medium",
+      "impact": "high",
+      "reason": "Core functionality depends on Word COM behavior, visible numbering extraction, and document mutation that can fail in non-obvious ways.",
+      "triggers": [
+        "Changes to COM interop calls or Word lifecycle management",
+        "Changes to paragraph analysis or numbering rebuild logic",
+        "Changes to file open/save/export flows"
+      ],
+      "safeguards": [
+        "Validate against real documents, not only synthetic samples",
+        "Keep manual review path intact",
+        "Treat COM cleanup and error handling as regression-sensitive"
+      ]
+    },
+    {
+      "area": "API registration and request routing",
+      "level": "high",
+      "likelihood": "medium",
+      "impact": "high",
+      "reason": "The app uses both MVC controller routing and Minimal API registration, so moving or consolidating endpoints can easily break assumptions in hosting or route resolution.",
+      "triggers": [
+        "Moving endpoints between StyleApiController and VisualizerApi",
+        "Changing route prefixes or HTTP methods",
+        "Refactoring CreateApiApp registration order"
+      ],
+      "safeguards": [
+        "Preserve current route surface until explicit tests exist",
+        "Document endpoint ownership before refactors",
+        "Verify static files and API routes together after changes"
+      ]
+    },
+    {
+      "area": "File I/O and project-root-relative storage",
+      "level": "high",
+      "likelihood": "high",
+      "impact": "high",
+      "reason": "Templates, playgrounds, stylegroups, exports, and ready-folder data all rely on path logic and persistent files; path changes can break multiple workflows at once.",
+      "triggers": [
+        "Changing folder names or root-relative path calculations",
+        "Moving templates, exports, or stylegroup storage",
+        "Changing bin-folder fallback behavior"
+      ],
+      "safeguards": [
+        "Make path changes behind a single abstraction",
+        "Smoke test template, export, and stylegroup flows after edits",
+        "Prefer additive config over implicit path rewrites"
+      ]
+    },
+    {
+      "area": "Background analysis jobs and in-memory state",
+      "level": "medium",
+      "likelihood": "medium",
+      "impact": "high",
+      "reason": "The analysis pipeline uses in-memory job tracking, so concurrency or lifecycle changes can silently break polling, retries, or restart behavior.",
+      "triggers": [
+        "Changing Task.Run job execution",
+        "Replacing or mutating the ConcurrentDictionary job store",
+        "Adding restart persistence without explicit design"
+      ],
+      "safeguards": [
+        "Keep job state transitions explicit",
+        "Test analyze -> poll -> export sequence end to end",
+        "Treat persistence changes as architecture work, not cleanup"
+      ]
+    },
+    {
+      "area": "Agent rules and operational workflow",
+      "level": "medium",
+      "likelihood": "low",
+      "impact": "medium",
+      "reason": "Rule files do not change runtime behavior directly, but changing or merging them can degrade future maintenance quality and verification discipline.",
+      "triggers": [
+        "Merging .agent and .agents content without classification",
+        "Dropping known build-error exclusions",
+        "Ignoring API host restart guidance"
+      ],
+      "safeguards": [
+        "Preserve current rules until a deliberate consolidation pass",
+        "Keep pre-existing error exclusions explicit",
+        "Treat rule changes as operational changes with review"
+      ]
+    },
+    {
+      "area": "Scaffold-managed documentation and reports",
+      "level": "low",
+      "likelihood": "low",
+      "impact": "low",
+      "reason": "Generated reports and docs mostly affect understanding, not execution, unless they are later used to justify incorrect code changes.",
+      "triggers": [
+        "Overwriting project-owned docs blindly",
+        "Assuming generated reports are perfectly accurate",
+        "Using reports as code-change authority without verification"
+      ],
+      "safeguards": [
+        "Keep generated artifacts separate from runtime code",
+        "Verify claims against source before refactors",
+        "Prefer additive docs over replacing repo docs"
+      ]
+    }
+  ],
+  "recommendedSequencing": [
+    "Refine interface ownership and tests before endpoint refactors.",
+    "Abstract file path handling before moving storage locations.",
+    "Consolidate agent rules only after preserve/merge classification.",
+    "Treat COM-analysis changes as highest-regression work."
+  ]
+}

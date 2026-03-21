@@ -1,0 +1,36 @@
+{
+  "targetPath": "/Users/matthewnewman/Documents/MyCode/lugos/genai-mcp",
+  "projectName": "genai-mcp",
+  "generatedOn": "2026-03-20 17:47:37",
+  "projectTypeHints": [],
+  "recommendation": "adopt",
+  "structure": {
+    "baselineDirectories": [
+      {
+        "name": "docs",
+        "exists": false
+      },
+      {
+        "name": "src",
+        "exists": false
+      },
+      {
+        "name": "tests",
+        "exists": false
+      }
+    ],
+    "baselineFiles": [
+      {
+        "name": ".gitignore",
+        "exists": false
+      },
+      {
+        "name": "README.md",
+        "exists": true
+      }
+    ]
+  },
+  "ruleFiles": [],
+  "manifests": [],
+  "likelyInterfaces": []
+}

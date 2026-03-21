@@ -1,0 +1,37 @@
+{
+  "targetPath": "/Users/matthewnewman/Documents/MyCode/lugos/genai-mcp",
+  "projectName": "genai-mcp",
+  "generatedOn": "2026-03-20 17:47:37",
+  "basedOn": {
+    "inventory": "genai-mcp.inventory.json",
+    "migrationMap": "genai-mcp.migration-map.json"
+  },
+  "summary": {
+    "projectKind": "General project",
+    "purpose": "First-pass architecture context generated from scaffold inventory and migration map.",
+    "recommendation": "adopt"
+  },
+  "scaffoldStance": {
+    "rules": "derive",
+    "structure": "adopt",
+    "interfaces": "adopt",
+    "dependencies": "adopt"
+  },
+  "subsystems": [],
+  "authoritativeRules": [],
+  "ruleHighlights": [],
+  "manifests": [],
+  "baseline": {
+    "adopt": [
+      "file:README.md"
+    ],
+    "map": [],
+    "keep": []
+  },
+  "interfaceGroups": [],
+  "nextArtifacts": [
+    "Rule classification report consolidating .agent and .agents guidance.",
+    "Explicit interface map with grouped endpoints and owning modules.",
+    "Project-specific implementation plan that preserves the existing architecture."
+  ]
+}
