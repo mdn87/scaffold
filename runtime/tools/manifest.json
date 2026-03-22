@@ -1,6 +1,34 @@
 {
   "version": "1.0.0",
   "description": "Available tools for scaffold-managed projects",
+  "_schemas": {
+    "tool-config": {
+      "description": "Schema for .scaffold/project/tool-config.json — created at init, never overwritten by sync",
+      "example": {
+        "project": "{project_name}",
+        "initialized": "{YYYY-MM-DD}",
+        "audit_interval_milestones": 3,
+        "activated_tools": ["sync", "plan-overview-gen"],
+        "activated_references": ["context7"],
+        "deactivated": {
+          "codex-review": "no Codex CLI available",
+          "serena": "small project, not needed"
+        }
+      }
+    },
+    "usage-log": {
+      "description": "Schema for .scaffold/project/usage-log.json — append-only, one entry per milestone",
+      "example": [
+        {
+          "milestone": "M1",
+          "date": "2026-03-22",
+          "used": ["sync", "handoff"],
+          "available": ["sync", "handoff", "codex-review", "plan-overview-gen"],
+          "notes": "codex-review skipped — reviewer was unavailable"
+        }
+      ]
+    }
+  },
   "tools": [
     {
       "name": "sync",
