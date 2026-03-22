@@ -1,0 +1,43 @@
+# Self-Update Skill
+
+## Purpose
+
+Check the upstream scaffold repo for updates on every session start. Keeps orchestration, skills, tools, references, and rules in sync across all projects.
+
+## When to Run
+
+- **Every session start**, before any other work
+- After the handoff skill reads session state
+
+## Instructions for Agent
+
+On session start, perform these steps:
+
+1. Check if `.scaffold/upstream.json` exists. If not, skip — this project is not scaffold-managed.
+
+2. Run the sync script:
+   ```bash
+   bash .scaffold/sync.sh
+   ```
+
+3. Read the output:
+   - "Up to date" → proceed normally
+   - "Updated: N files changed" → note the changed files, they may affect current work
+   - "WARNING: Could not reach upstream" → log the warning, proceed with local copy
+
+4. If orchestration files changed, re-read any milestone files relevant to current work.
+
+## Failure Handling
+
+If sync fails, **do not block the session**. Log a warning and continue. The local copy is always functional — sync just keeps it current.
+
+## upstream.json Format
+
+```json
+{
+  "repo_url": "git@github.com:{owner}/scaffold.git",
+  "branch": "main",
+  "last_synced_commit": "{commit_hash}",
+  "last_synced_date": "{ISO 8601 timestamp}"
+}
+```
