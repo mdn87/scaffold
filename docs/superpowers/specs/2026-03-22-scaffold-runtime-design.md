@@ -263,6 +263,46 @@ During project initialization, `apply-scaffold.ps1`:
 3. Asks the user about uncertain tools ("API surface detected — include Serena?")
 4. Writes active tool selection to `.scaffold/project/tool-config.json`
 
+### Tool Activation Lifecycle
+
+Tools move through three states: **available** (in manifest), **activated** (in tool-config.json), **in-use** (referenced in a milestone).
+
+Activation happens at two points:
+
+1. **Plan-init (coarse):** When the plan is built, the agent maps tools to milestones based on scope. Example: "M2 touches API endpoints — activating Serena for M2+." This mapping is written into `PLAN-OVERVIEW.md` as a tool-milestone matrix.
+2. **Milestone start (refined):** Before implementation begins, the agent reviews the milestone scope against activated tools and confirms or adjusts. Tools can be activated or deactivated at this point based on how the project has evolved since plan-init.
+
+### Tool Conflict Resolution
+
+External tools (Serena, Context7, etc.) may have their own opinions about project structure or behavior that conflict with scaffold orchestration. Two flavors:
+
+- **Structural conflicts:** Tool expects files in location X, scaffold puts them in location Y. Usually not a real conflict — different domains.
+- **Behavioral conflicts:** Tool says "do X," scaffold orchestration says "do Y." Example: a tool suggests auto-refactoring, but milestone orchestration requires cross-agent review first.
+
+Each tool entry in `manifest.json` includes a `conflicts` section:
+
+```json
+{
+  "name": "serena",
+  "conflicts": {
+    "behavioral": [
+      {
+        "pattern": "auto-refactor",
+        "resolution": "defer to milestone-review orchestration",
+        "note": "Treat Serena refactor suggestions as recommendations, not actions, until reviewed"
+      }
+    ]
+  },
+  "scaffold_overrides": {
+    "priority": "scaffold wins on orchestration, tool wins on code intelligence"
+  }
+}
+```
+
+When a tool is activated, the agent reads conflict declarations and applies resolution rules. The general principle: **scaffold wins on orchestration and process, tool wins on its domain expertise.**
+
+For unpredictable conflicts (flip-flopping between tool recommendations and scaffold orchestration across milestones), the passive audit detects the pattern and flags it for the user to make a ruling, which becomes an ADR.
+
 ---
 
 ## Documentation Standards & Lifecycle
