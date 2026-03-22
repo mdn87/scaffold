@@ -75,13 +75,13 @@
 
 3. **Check Deferred Questions**: Review the "Deferred Questions" table. For any row where "Answer" is empty, ask the user for the answer before proceeding. Record answers in this table.
 
-4. **Review Tools Manifest**: Read `docs/superpowers/` manifest files to understand available tools and their constraints. Note which tools are activated for this project.
+4. **Review Tools Manifest**: Read `.scaffold/tools/manifest.json` and `.scaffold/references/registry.json` to understand available tools and their constraints. Note which tools are activated for this project.
 
 5. **Execute Implementation Steps**: Work through the "Implementation Sequence" in order. For each step, read the relevant files, understand the existing code, make targeted edits, and validate locally before moving to the next step.
 
 6. **Run Validation**: Execute all checks in the "Validation" section. For any failing check, fix the issue and re-run until all checks pass. Record results in the validation tables.
 
-7. **Trigger Cross-Agent Review**: If this is a handoff to another agent or a blocking point, follow `docs/superpowers/milestone-review.md`. Address any objections and record results in the Validation section.
+7. **Trigger Cross-Agent Review**: If this is a handoff to another agent or a blocking point, follow `.scaffold/orchestration/milestone-review.md`. Address any objections and record results in the Validation section.
 
 8. **Update This File**: Change Status from "In Progress" to "Review" once implementation is complete. Note any blockers, deviations, or lessons learned in comments at the top of the file if needed.
 

@@ -34,7 +34,7 @@ This orchestration activates when:
 
 #### Step 3: Tool Check
 
-- Read all files in `docs/superpowers/` to understand available tools, their constraints, and activation status
+- Read `.scaffold/tools/manifest.json` and `.scaffold/references/registry.json` to understand available tools, their constraints, and activation status
 - Review the Tool-Milestone Matrix in the plan to see which tools are expected for this milestone
 - Cross-reference against the Implementation Sequence to confirm tool availability
 - If a tool is not available but is needed, ask the user: "M{n} requires {tool}. Is it available?"
@@ -90,7 +90,7 @@ This orchestration activates when:
 #### Step 8: Cross-Agent Review
 
 - If this milestone is a handoff to another agent or a critical juncture, trigger a review
-- Follow the process in `docs/superpowers/milestone-review.md` (if it exists)
+- Follow the process in `.scaffold/orchestration/milestone-review.md` (if it exists)
 - Address any objections or change requests from reviewers
 - Record review results in the **Cross-Agent Review** section of the Validation table
   - KISS: Evaluate simplicity of solution
@@ -114,7 +114,7 @@ This orchestration activates when:
 
 - Ask the user: "Milestone M{n} complete. Run better-engineering review? (yes/no)"
 - If user says yes:
-  - Follow the process in `docs/superpowers/better-engineering.md` (if it exists)
+  - Follow the process in `.scaffold/orchestration/better-engineering.md` (if it exists)
   - Review the implementation for code quality, performance, security, maintainability
   - Address any findings and re-validate if changes are made
 - If user says no: proceed to step 11
@@ -166,7 +166,7 @@ Update the milestone file Status field as you progress:
 - **Current milestone**: `docs/plans/PLAN-M{n}.md`
 - **Full plan**: `docs/plans/PLAN.md`
 - **Architecture**: `docs/architecture.md`
-- **Tools manifest**: `docs/superpowers/`
+- **Tools manifest**: `.scaffold/tools/manifest.json`
 - **Previous milestones**: `docs/plans/PLAN-M{n-1}.md`
 
 ### Commands

@@ -37,7 +37,7 @@ Each dimension is reviewed independently. The reviewing agent must answer PASS o
 ### Codex CLI (Preferred)
 
 ```bash
-bash runtime/tools/codex-review.sh \
+bash .scaffold/tools/codex-review.sh \
   --dimension KISS \
   --milestone docs/milestones/PLAN-M{n}.md \
   --files "src/foo.py src/bar.py"

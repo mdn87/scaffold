@@ -24,7 +24,7 @@ Read these files to understand the existing project state:
 - `docs/architecture.md` — current architecture and design decisions
 - `.claude/handoff.md` — previous session notes and current state (if exists)
 - `docs/plans/PLAN.md` — existing plan (if exists)
-- `docs/superpowers/` — available tools and tool-milestone matrices (if exists)
+- `.scaffold/tools/manifest.json` — available tools and activation status (if exists)
 - `docs/INDEX.md` — current documentation index
 
 Take notes on:
