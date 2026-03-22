@@ -1520,7 +1520,7 @@ function Copy-RuntimeToTarget {
     $runtimeSource = Join-Path $ScaffoldRoot "runtime"
     $scaffoldTarget = Join-Path $TargetPath ".scaffold"
 
-    if (-not (Test-Path $runtimeSource)) {
+    if (-not (Test-Path -LiteralPath $runtimeSource)) {
         Write-Warning "Runtime directory not found at $runtimeSource — skipping runtime injection"
         return
     }
@@ -1530,9 +1530,9 @@ function Copy-RuntimeToTarget {
     foreach ($dir in $upstreamDirs) {
         $src = Join-Path $runtimeSource $dir
         $dst = Join-Path $scaffoldTarget $dir
-        if (Test-Path $src) {
-            if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
-            Copy-Item -Recurse -Force $src $dst
+        if (Test-Path -LiteralPath $src) {
+            if (Test-Path -LiteralPath $dst) { Remove-Item -LiteralPath $dst -Recurse -Force }
+            Copy-Item -LiteralPath $src -Destination $dst -Recurse -Force
         }
     }
 
@@ -1541,18 +1541,18 @@ function Copy-RuntimeToTarget {
     foreach ($file in $rootFiles) {
         $src = Join-Path $runtimeSource $file
         $dst = Join-Path $scaffoldTarget $file
-        if (Test-Path $src) {
-            Copy-Item -Force $src $dst
+        if (Test-Path -LiteralPath $src) {
+            Copy-Item -LiteralPath $src -Destination $dst -Force
         }
     }
 
     # Create project-owned directory if it doesn't exist
     $projectDir = Join-Path $scaffoldTarget "project"
-    if (-not (Test-Path $projectDir)) {
+    if (-not (Test-Path -LiteralPath $projectDir)) {
         New-Item -ItemType Directory -Path $projectDir -Force | Out-Null
 
         # Empty project rules
-        Set-Content -Path (Join-Path $projectDir "rules.md") -Value "# Project-Specific Rules`n`nAdd project-specific agent rules here. This file is never overwritten by scaffold sync.`n"
+        Set-Content -LiteralPath (Join-Path $projectDir "rules.md") -Value "# Project-Specific Rules`n`nAdd project-specific agent rules here. This file is never overwritten by scaffold sync.`n"
 
         # Default tool-config
         $toolConfig = @{
@@ -1563,14 +1563,14 @@ function Copy-RuntimeToTarget {
             activated_references = @()
             deactivated = @{}
         }
-        $toolConfig | ConvertTo-Json -Depth 3 | Set-Content -Path (Join-Path $projectDir "tool-config.json")
+        $toolConfig | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $projectDir "tool-config.json")
 
         # Empty usage log
-        Set-Content -Path (Join-Path $projectDir "usage-log.json") -Value "[]"
+        Set-Content -LiteralPath (Join-Path $projectDir "usage-log.json") -Value "[]"
     }
 
     # Create/update upstream.json
-    $currentCommit = ""
+    $currentCommit = $null
     try {
         $currentCommit = git -C $ScaffoldRoot rev-parse HEAD 2>$null
     } catch { }
@@ -1579,9 +1579,9 @@ function Copy-RuntimeToTarget {
         repo_url = $RepoUrl
         branch = $Branch
         last_synced_commit = $currentCommit
-        last_synced_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        last_synced_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     }
-    $upstream | ConvertTo-Json | Set-Content -Path (Join-Path $scaffoldTarget "upstream.json")
+    $upstream | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $scaffoldTarget "upstream.json")
 
     Write-Status "Runtime injected to $scaffoldTarget"
 }
@@ -1596,8 +1596,8 @@ function Copy-DocTemplates {
     $templateDir = Join-Path $ScaffoldRoot "runtime" "docs-templates"
     $docsDir = Join-Path $TargetPath "docs"
 
-    if (-not (Test-Path $templateDir)) { return }
-    if (-not (Test-Path $docsDir)) {
+    if (-not (Test-Path -LiteralPath $templateDir)) { return }
+    if (-not (Test-Path -LiteralPath $docsDir)) {
         New-Item -ItemType Directory -Path $docsDir -Force | Out-Null
     }
 
@@ -1614,26 +1614,26 @@ function Copy-DocTemplates {
         $src = Join-Path $templateDir $template.Key
         $dst = Join-Path $docsDir $template.Value
 
-        if ((Test-Path $src) -and -not (Test-Path $dst)) {
+        if ((Test-Path -LiteralPath $src) -and -not (Test-Path -LiteralPath $dst)) {
             $dstDir = Split-Path $dst -Parent
-            if (-not (Test-Path $dstDir)) {
+            if (-not (Test-Path -LiteralPath $dstDir)) {
                 New-Item -ItemType Directory -Path $dstDir -Force | Out-Null
             }
 
-            $content = Get-Content -Raw $src
+            $content = Get-Content -LiteralPath $src -Raw
             $content = $content -replace '\{project_name\}', $ProjectName
             $content = $content -replace '\{date\}', $today
             $content = $content -replace '\{status\}', 'Draft'
-            Set-Content -Path $dst -Value $content
+            Set-Content -LiteralPath $dst -Value $content
         }
     }
 
     # Create plans and reviews directories
     @("plans", "reviews", "decisions") | ForEach-Object {
         $dir = Join-Path $docsDir $_
-        if (-not (Test-Path $dir)) {
+        if (-not (Test-Path -LiteralPath $dir)) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
-            Set-Content -Path (Join-Path $dir ".gitkeep") -Value ""
+            Set-Content -LiteralPath (Join-Path $dir ".gitkeep") -Value ""
         }
     }
 
@@ -1651,23 +1651,25 @@ function Invoke-ToolDiscovery {
     $registryPath = Join-Path $ScaffoldRoot "runtime" "references" "registry.json"
     $toolConfigPath = Join-Path $TargetPath ".scaffold" "project" "tool-config.json"
 
-    if (-not (Test-Path $manifestPath)) { return }
+    if (-not (Test-Path -LiteralPath $manifestPath)) { return }
 
-    $manifest = Get-Content -Raw $manifestPath | ConvertFrom-Json
-    $registry = if (Test-Path $registryPath) { Get-Content -Raw $registryPath | ConvertFrom-Json } else { $null }
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $registry = if (Test-Path -LiteralPath $registryPath) { Get-Content -LiteralPath $registryPath -Raw | ConvertFrom-Json } else { $null }
 
     $activated = @()
     $suggestions = @()
 
     # Auto-activate tools marked as auto_activate
-    foreach ($tool in $manifest.tools) {
-        if ($tool.auto_activate) {
-            $activated += $tool.name
+    if ($manifest.tools) {
+        foreach ($tool in $manifest.tools) {
+            if ($tool.auto_activate) {
+                $activated += $tool.name
+            }
         }
     }
 
     # Check references against detected signals
-    if ($registry) {
+    if ($registry -and $registry.references) {
         foreach ($ref in $registry.references) {
             $shouldSuggest = $false
             foreach ($trigger in $ref.auto_suggest_when) {
@@ -1688,23 +1690,23 @@ function Invoke-ToolDiscovery {
         }
     }
 
-    Write-Host ""
+    Write-Status ""
     Write-Status "Tool Discovery:"
-    Write-Host "  Auto-activated: $($activated -join ', ')"
+    Write-Status "  Auto-activated: $($activated -join ', ')"
 
     if ($suggestions.Count -gt 0) {
-        Write-Host "  Suggested (confirm with agent on first session):"
+        Write-Status "  Suggested (confirm with agent on first session):"
         foreach ($s in $suggestions) {
-            Write-Host "    - $($s.name): $($s.description) ($($s.reason))"
+            Write-Status "    - $($s.name): $($s.description) ($($s.reason))"
         }
     }
 
     # Update tool-config.json
-    if (Test-Path $toolConfigPath) {
-        $config = Get-Content -Raw $toolConfigPath | ConvertFrom-Json
+    if (Test-Path -LiteralPath $toolConfigPath) {
+        $config = Get-Content -LiteralPath $toolConfigPath -Raw | ConvertFrom-Json
         $config.activated_tools = $activated
         $config.activated_references = @()
-        $config | ConvertTo-Json -Depth 3 | Set-Content -Path $toolConfigPath
+        $config | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $toolConfigPath
     }
 }
 
@@ -1730,7 +1732,7 @@ Register-CodexGlobalTrust -TargetPath $resolvedTargetPath
 Copy-TemplateTree -SourceRoot $templateRoot -DestinationRoot $resolvedTargetPath -Tokens $tokens -Overwrite $Force.IsPresent
 
 # --- Runtime Layer ---
-if (Test-Path (Join-Path $repoRoot "runtime")) {
+if (Test-Path -LiteralPath (Join-Path $repoRoot "runtime")) {
     $scaffoldRepoUrl = ""
     try {
         $scaffoldRepoUrl = git -C $repoRoot remote get-url origin 2>$null
@@ -1743,24 +1745,24 @@ if (Test-Path (Join-Path $repoRoot "runtime")) {
     Copy-RuntimeToTarget -ScaffoldRoot $repoRoot -TargetPath $resolvedTargetPath -RepoUrl $scaffoldRepoUrl
     Copy-DocTemplates -ScaffoldRoot $repoRoot -TargetPath $resolvedTargetPath -ProjectName $resolvedProjectName
 
-    $signals = @{
+    $discoverySignals = @{
         stack = $agentWriteResult.stackHints
         has_api = $agentWriteResult.hasApiSurface
         has_frontend = $false
-        large_codebase = ((Get-ChildItem -Recurse -File $resolvedTargetPath -ErrorAction SilentlyContinue | Measure-Object).Count -gt 100)
+        large_codebase = ((Get-ChildItem -LiteralPath $resolvedTargetPath -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count -gt 100)
     }
-    Invoke-ToolDiscovery -ScaffoldRoot $repoRoot -TargetPath $resolvedTargetPath -DetectedSignals $signals
+    Invoke-ToolDiscovery -ScaffoldRoot $repoRoot -TargetPath $resolvedTargetPath -DetectedSignals $discoverySignals
 }
 
 # Add scaffold handoff entries to .gitignore
 $gitignorePath = Join-Path $resolvedTargetPath ".gitignore"
-if (Test-Path $gitignorePath) {
-    $gitignoreContent = Get-Content -Raw $gitignorePath
+if (Test-Path -LiteralPath $gitignorePath) {
+    $gitignoreContent = Get-Content -LiteralPath $gitignorePath -Raw
     $entriesToAdd = @(".scaffold/project/handoff.md", ".scaffold/project/handoff-history/")
     $added = $false
     foreach ($entry in $entriesToAdd) {
         if ($gitignoreContent -notmatch [regex]::Escape($entry)) {
-            Add-Content -Path $gitignorePath -Value $entry
+            Add-Content -LiteralPath $gitignorePath -Value $entry
             $added = $true
         }
     }
