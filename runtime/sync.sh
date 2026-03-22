@@ -14,7 +14,7 @@ if [ ! -f "$UPSTREAM_JSON" ]; then
   exit 0
 fi
 
-# Parse upstream.json (portable: python or node, fallback to grep)
+# Parse upstream.json (requires python3 or node)
 parse_json() {
   local key="$1"
   if command -v python3 &>/dev/null; then
@@ -22,9 +22,10 @@ parse_json() {
   elif command -v python &>/dev/null; then
     python -c "import json,sys; print(json.load(sys.stdin)['$key'])" < "$UPSTREAM_JSON"
   elif command -v node &>/dev/null; then
-    node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('$UPSTREAM_JSON','utf8'))['$key'])"
+    node -e "const fs=require('fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1],'utf8'))['$key'])" "$UPSTREAM_JSON"
   else
-    grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$UPSTREAM_JSON" | sed 's/.*":\s*"//' | sed 's/"$//'
+    echo "[scaffold] ERROR: python3 or node required for JSON parsing" >&2
+    exit 1
   fi
 }
 
@@ -56,9 +57,13 @@ echo "[scaffold] Update available: ${LAST_COMMIT:0:8} → ${REMOTE_HEAD:0:8}"
 TMPDIR="$(mktemp -d)"
 trap 'rm -rf "$TMPDIR"' EXIT
 
-git clone --depth 1 --branch "$BRANCH" --filter=blob:none --sparse "$REPO_URL" "$TMPDIR/repo" 2>/dev/null
-cd "$TMPDIR/repo"
-git sparse-checkout set runtime 2>/dev/null
+if ! git clone --depth 1 --branch "$BRANCH" --filter=blob:none --sparse "$REPO_URL" "$TMPDIR/repo" 2>&1; then
+  echo "[scaffold] WARNING: Could not clone upstream — continuing with local copy"
+  exit 0
+fi
+
+CLONE_DIR="$TMPDIR/repo"
+git -C "$CLONE_DIR" sparse-checkout set runtime 2>/dev/null
 
 # Count changes
 CHANGED=0
@@ -68,42 +73,55 @@ CHANGED_FILES=""
 UPSTREAM_DIRS="orchestration skills tools references rules docs-templates"
 
 for dir in $UPSTREAM_DIRS; do
-  if [ -d "runtime/$dir" ]; then
+  if [ -d "$CLONE_DIR/runtime/$dir" ]; then
     # Count files that differ
     if [ -d "$SCAFFOLD_DIR/$dir" ]; then
       while IFS= read -r file; do
-        rel="${file#runtime/$dir/}"
-        if [ ! -f "$SCAFFOLD_DIR/$dir/$rel" ] || ! diff -q "runtime/$dir/$rel" "$SCAFFOLD_DIR/$dir/$rel" &>/dev/null; then
+        rel="${file#$CLONE_DIR/runtime/$dir/}"
+        if [ ! -f "$SCAFFOLD_DIR/$dir/$rel" ] || ! diff -q "$file" "$SCAFFOLD_DIR/$dir/$rel" &>/dev/null; then
           CHANGED=$((CHANGED + 1))
-          CHANGED_FILES="$CHANGED_FILES $dir/$rel"
+          CHANGED_FILES="${CHANGED_FILES:+$CHANGED_FILES, }$dir/$rel"
         fi
-      done < <(find "runtime/$dir" -type f)
+      done < <(find "$CLONE_DIR/runtime/$dir" -type f)
     else
-      CHANGED=$((CHANGED + $(find "runtime/$dir" -type f | wc -l)))
+      CHANGED=$((CHANGED + $(find "$CLONE_DIR/runtime/$dir" -type f | wc -l)))
     fi
     rm -rf "$SCAFFOLD_DIR/$dir"
-    cp -r "runtime/$dir" "$SCAFFOLD_DIR/$dir"
+    cp -r "$CLONE_DIR/runtime/$dir" "$SCAFFOLD_DIR/$dir"
   fi
 done
 
 # Sync root-level files (sync.sh itself)
-if [ -f "runtime/sync.sh" ]; then
-  if ! diff -q "runtime/sync.sh" "$SCAFFOLD_DIR/sync.sh" &>/dev/null 2>&1; then
+if [ -f "$CLONE_DIR/runtime/sync.sh" ]; then
+  if ! diff -q "$CLONE_DIR/runtime/sync.sh" "$SCAFFOLD_DIR/sync.sh" &>/dev/null 2>&1; then
     CHANGED=$((CHANGED + 1))
-    CHANGED_FILES="$CHANGED_FILES sync.sh"
+    CHANGED_FILES="${CHANGED_FILES:+$CHANGED_FILES, }sync.sh"
   fi
-  cp "runtime/sync.sh" "$SCAFFOLD_DIR/sync.sh"
+  cp "$CLONE_DIR/runtime/sync.sh" "$SCAFFOLD_DIR/sync.sh"
 fi
 
-# Update upstream.json with new commit
-cd "$SCAFFOLD_DIR"
+# Update upstream.json with new commit hash via environment variables (no shell injection)
+SYNC_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+export REMOTE_HEAD SYNC_DATE
+
 if command -v python3 &>/dev/null; then
   python3 -c "
-import json
-with open('upstream.json', 'r+') as f:
+import json, os
+with open('$SCAFFOLD_DIR/upstream.json', 'r+') as f:
     data = json.load(f)
-    data['last_synced_commit'] = '$REMOTE_HEAD'
-    data['last_synced_date'] = '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+    data['last_synced_commit'] = os.environ['REMOTE_HEAD']
+    data['last_synced_date'] = os.environ['SYNC_DATE']
+    f.seek(0)
+    json.dump(data, f, indent=2)
+    f.truncate()
+"
+elif command -v python &>/dev/null; then
+  python -c "
+import json, os
+with open('$SCAFFOLD_DIR/upstream.json', 'r+') as f:
+    data = json.load(f)
+    data['last_synced_commit'] = os.environ['REMOTE_HEAD']
+    data['last_synced_date'] = os.environ['SYNC_DATE']
     f.seek(0)
     json.dump(data, f, indent=2)
     f.truncate()
@@ -111,11 +129,13 @@ with open('upstream.json', 'r+') as f:
 elif command -v node &>/dev/null; then
   node -e "
 const fs = require('fs');
-const data = JSON.parse(fs.readFileSync('upstream.json', 'utf8'));
-data.last_synced_commit = '$REMOTE_HEAD';
-data.last_synced_date = new Date().toISOString();
-fs.writeFileSync('upstream.json', JSON.stringify(data, null, 2));
-"
+const data = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+data.last_synced_commit = process.env.REMOTE_HEAD;
+data.last_synced_date = process.env.SYNC_DATE;
+fs.writeFileSync(process.argv[1], JSON.stringify(data, null, 2));
+" "$SCAFFOLD_DIR/upstream.json"
+else
+  echo "[scaffold] WARNING: Could not update upstream.json — no python3 or node available"
 fi
 
 if [ "$CHANGED" -gt 0 ]; then

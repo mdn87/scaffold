@@ -31,6 +31,10 @@ On session start, perform these steps:
 
 If sync fails, **do not block the session**. Log a warning and continue. The local copy is always functional — sync just keeps it current.
 
+- Exit code 0: sync completed (whether updated or already current)
+- Non-zero exit code: sync encountered an error — log the exit code and continue with local copy
+- "ERROR" in output: a required dependency is missing (python3 or node) — note for the user but do not block
+
 ## upstream.json Format
 
 ```json
