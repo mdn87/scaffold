@@ -1,0 +1,31 @@
+{
+  "version": "1.0.0",
+  "description": "Available tools for scaffold-managed projects",
+  "tools": [
+    {
+      "name": "sync",
+      "file": "sync.sh",
+      "description": "Self-update script for fetching upstream scaffold changes",
+      "platform": "all",
+      "auto_activate": true,
+      "conflicts": {}
+    },
+    {
+      "name": "codex-review",
+      "file": "codex-review.sh",
+      "description": "Invoke Codex CLI with structured review prompt for cross-agent review",
+      "platform": "all",
+      "auto_activate": false,
+      "conflicts": {},
+      "requires": "codex"
+    },
+    {
+      "name": "plan-overview-gen",
+      "file": "plan-overview-gen.sh",
+      "description": "Regenerate PLAN-OVERVIEW.md from milestone files",
+      "platform": "all",
+      "auto_activate": true,
+      "conflicts": {}
+    }
+  ]
+}
