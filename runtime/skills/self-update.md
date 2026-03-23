@@ -1,5 +1,7 @@
 # Self-Update Skill
 
+> Last updated: 2026-03-23
+
 ## Purpose
 
 Check the upstream scaffold repo for updates on every session start. Keeps orchestration, skills, tools, references, and rules in sync across all projects.
