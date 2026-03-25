@@ -23,3 +23,5 @@ node_modules/
 .venv/
 venv/
 __pycache__/
+.claude/handoff.md
+.claude/handoff-history/

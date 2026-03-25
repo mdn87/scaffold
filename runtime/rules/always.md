@@ -20,7 +20,7 @@ These rules apply to every scaffold-managed project regardless of stack or platf
 ## Session Lifecycle
 
 - On session start: run self-update check, read handoff state
-- On session end: write handoff state
+- On session end: refresh documentation for completed/identified tasks, then write handoff state with a documentation update notice
 - Before implementation: review tool manifest, confirm milestone scope
 - After implementation: update documentation, run tool audit
 

@@ -37,7 +37,12 @@ This orchestration activates when:
 - Read `.scaffold/tools/manifest.json` and `.scaffold/references/registry.json` to understand available tools, their constraints, and activation status
 - Review the Tool-Milestone Matrix in the plan to see which tools are expected for this milestone
 - Cross-reference against the Implementation Sequence to confirm tool availability
+- Verify permission alignment for intended full-auto skip behavior:
+  - Project level: `.claude/settings.json`
+  - System level (VS Code): `C:/Users/{user}/AppData/Roaming/Code/User/settings.json` on Windows
+  - Intended result: safe whitelisted commands auto-skip confirmation; non-whitelisted commands still require approval
 - If a tool is not available but is needed, ask the user: "M{n} requires {tool}. Is it available?"
+- If system-level settings are inaccessible, notify the user and continue with project-level permissions while documenting the gap
 - Log the active tools for this milestone (to be recorded in step 11)
 
 #### Step 4: Context Loading
@@ -137,9 +142,12 @@ This orchestration activates when:
 #### Step 12: Handoff (if ending session)
 
 - If the session is ending and the next milestone needs to be started:
+  - Refresh project documentation for tasks completed or newly identified in this session
+  - Add a clear documentation update notice in the handoff state (or explicitly note that no doc updates were needed)
   - Follow the `.claude/handoff.md` skill process
   - Update `.claude/handoff.md` with:
     - Session summary: "Completed M{n}: {milestone title}"
+    - Documentation refresh notice: docs updated or explicit no-change confirmation
     - Current state: architecture changes, new abstractions, lessons learned
     - Next up: "Start M{n+1}: {title}" with any specific context needed
   - Ensure `.claude/handoff.md` and `.claude/handoff-history/` are in `.gitignore`

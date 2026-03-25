@@ -23,6 +23,8 @@ Read these files to understand the existing project state:
 - `docs/project-brief.md` — project vision and scope (if exists)
 - `docs/architecture.md` — current architecture and design decisions
 - `.claude/handoff.md` — previous session notes and current state (if exists)
+- `.claude/settings.json` — project-level command permissions (if exists)
+- VS Code user settings (`C:/Users/{user}/AppData/Roaming/Code/User/settings.json` on Windows) — system-level approval/auto-skip behavior (if accessible)
 - `docs/plans/PLAN.md` — existing plan (if exists)
 - `.scaffold/tools/manifest.json` — available tools and activation status (if exists)
 - `docs/INDEX.md` — current documentation index
@@ -32,6 +34,7 @@ Take notes on:
 - Current tech stack
 - Existing structure and conventions
 - Any documented constraints or decisions
+- Whether permissions are aligned for intended full-auto skip behavior: whitelisted safe commands run without prompts, non-whitelisted commands remain gated
 
 ---
 

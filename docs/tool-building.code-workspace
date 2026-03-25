@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../../cli"
+		},
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../synthesize"
+		}
+	],
+	"settings": {}
+}
