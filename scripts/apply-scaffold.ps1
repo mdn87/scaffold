@@ -1680,7 +1680,8 @@ function Copy-RuntimeToTarget {
                 $existingUpstream.last_synced_commit -eq $currentCommit -and
                 $existingUpstream.last_synced_date
             ) {
-                $lastSyncedDate = $existingUpstream.last_synced_date
+                Write-Status "Runtime injected to $scaffoldTarget"
+                return
             }
         } catch { }
     }
