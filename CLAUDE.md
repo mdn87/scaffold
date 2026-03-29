@@ -63,4 +63,5 @@ Say: `Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proceed? (yes/
 
 ## Permissions
 
-Safe auto-run commands are configured in `.claude/settings.json`. Do not run commands outside that list without confirming with the user first.
+Safe auto-run commands are configured in `.claude/settings.json`. Normal project-scoped execution may autorun for listed non-destructive commands, including trusted Git, GitHub CLI, and repo script operations. Destructive commands remain explicitly denied.
+

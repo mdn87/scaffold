@@ -609,10 +609,12 @@ function Get-ExistingAgentRuleState {
         '.agents\always-approve-whitelisted-commands.md',
         '.agents\quota-drain-prevention.md',
         '.agents\restart-api-host-as-needed.md',
+        '.agents\generate-copilot-instructions.md',
         '.agents\scaffold-generated\rules.md',
         '.agents\scaffold-generated\always-approve-whitelisted-commands.md',
         '.agents\scaffold-generated\quota-drain-prevention.md',
-        '.agents\scaffold-generated\restart-api-host-as-needed.md'
+        '.agents\scaffold-generated\restart-api-host-as-needed.md',
+        '.agents\scaffold-generated\generate-copilot-instructions.md'
     )
 
     $relativePaths = @($RuleFiles | ForEach-Object { Get-RelativePath -BasePath $BasePath -FullPath $_.FullName })
@@ -918,6 +920,30 @@ function Get-WhitelistCommands {
     $commands.Add('Get-ChildItem')
     $commands.Add('Get-Content')
     $commands.Add('Select-String')
+    $commands.Add('git add')
+    $commands.Add('git branch')
+    $commands.Add('git clone')
+    $commands.Add('git commit')
+    $commands.Add('git config')
+    $commands.Add('git fetch')
+    $commands.Add('git init')
+    $commands.Add('git ls-tree')
+    $commands.Add('git merge')
+    $commands.Add('git pull')
+    $commands.Add('git push')
+    $commands.Add('git rebase --continue')
+    $commands.Add('git remote')
+    $commands.Add('git restore --staged')
+    $commands.Add('git submodule')
+    $commands.Add('git switch')
+    $commands.Add('git worktree')
+    $commands.Add('gh auth')
+    $commands.Add('gh issue')
+    $commands.Add('gh pr')
+    $commands.Add('gh repo')
+    $commands.Add('pwsh -File scripts/apply-scaffold.ps1')
+    $commands.Add('pwsh -File scripts/generate-architecture-context.ps1')
+    $commands.Add('pwsh -File scripts/generate-migration-map.ps1')
 
     return @($commands | Sort-Object -Unique)
 }
@@ -1038,6 +1064,8 @@ Set safe autorun for the following commands when they match the current workspac
 
 $commandLines
 
+Non-destructive project-scoped execution may autorun when it matches the allowlist above. Destructive commands remain excluded even when related command families are otherwise allowed.
+
 ## Operating Defaults
 
 - Prefer small, reviewable changes.
@@ -1086,6 +1114,18 @@ When the workspace agent supports command safety flags, mark these commands safe
 This list is derived from project manifests, command examples in markdown docs, lightweight entry-point inference, and optional remote GitHub enrichment.
 
 $commandLines
+
+## Explicitly Excluded From Autorun
+
+- ``git reset --hard``
+- ``git checkout --``
+- ``git branch -D``
+- ``git branch --delete``
+- ``git push --force``
+- ``git clean -fd``
+- ``git clean -xfd``
+- ``rm -rf``
+- ``Remove-Item -Recurse``
 "@
 }
 
@@ -1132,6 +1172,34 @@ trigger: always_on
 ---
 
 Restart the API host or local dev server when API-facing changes need to be reflected in the running app.
+"@
+}
+
+function New-CopilotInstructionsContent {
+    return @"
+---
+trigger: always_on
+---
+
+# GitHub Copilot Instructions Generation
+
+When applying scaffold to a project, generate `.github/copilot-instructions.md` if it does not already exist.
+
+## What to Include
+
+Synthesize content from `AGENTS.md` and `CLAUDE.md` (or equivalent project context files) into a single file in Copilot's native format:
+
+- **Project table** — active directories and what they contain
+- **Skip lists** — directories and file types to ignore
+- **Operating rules** — always-ask-before guardrails and safe auto-run defaults
+- **Per-project quick-reference** — install, run, and architecture summary
+
+## Rules
+
+- Create `.github/` if it does not exist.
+- Never overwrite an existing `.github/copilot-instructions.md` without user confirmation.
+- Keep the file concise — Copilot reads it on every request; avoid redundant or verbose sections.
+- Mirror the same guardrails from `.agents/always-approve-whitelisted-commands.md` and `quota-drain-prevention.md` so all agents share consistent operating boundaries.
 "@
 }
 
@@ -1246,7 +1314,7 @@ Say: ``Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proceed? (yes
 
 ## Permissions
 
-Safe auto-run commands are configured in ``.claude/settings.json``. Do not run commands outside that list without confirming with the user first.
+Safe auto-run commands are configured in ``.claude/settings.json``. Normal project-scoped execution may autorun for listed non-destructive commands, including trusted Git, GitHub CLI, and repo script operations. Destructive commands remain explicitly denied.
 "@
 }
 
@@ -1285,10 +1353,28 @@ function Register-CodexGlobalTrust {
     Write-Status "Registered Codex global trust for $TargetPath"
 }
 
+function Get-ClaudeDenyPermissions {
+    return @(
+        'Bash(git reset --hard:*)',
+        'Bash(git checkout --:*)',
+        'Bash(git branch -D:*)',
+        'Bash(git branch --delete:*)',
+        'Bash(git push --force:*)',
+        'Bash(git clean -fd:*)',
+        'Bash(git clean -xfd:*)',
+        'Bash(rm -rf:*)',
+        'Bash(Remove-Item -Recurse:*)'
+    )
+}
+
 function New-ClaudeSettingsContent {
-    param([string[]]$ClaudePermissions)
+    param(
+        [string[]]$ClaudePermissions,
+        [string[]]$ClaudeDenyPermissions
+    )
 
     $allowArray = ($ClaudePermissions | ForEach-Object { "    `"$_`"" }) -join ",`n"
+    $denyArray = ($ClaudeDenyPermissions | ForEach-Object { "    `"$_`"" }) -join ",`n"
 
     return @"
 {
@@ -1296,7 +1382,9 @@ function New-ClaudeSettingsContent {
     "allow": [
 $allowArray
     ],
-    "deny": []
+    "deny": [
+$denyArray
+    ]
   }
 }
 "@
@@ -1434,6 +1522,11 @@ function Write-AgentFiles {
             path = Join-Path $outputRoot 'quota-drain-prevention.md'
             relative = Get-RelativePath -BasePath $TargetPath -FullPath (Join-Path $outputRoot 'quota-drain-prevention.md')
             content = New-QuotaContent
+        },
+        [pscustomobject]@{
+            path = Join-Path $outputRoot 'generate-copilot-instructions.md'
+            relative = Get-RelativePath -BasePath $TargetPath -FullPath (Join-Path $outputRoot 'generate-copilot-instructions.md')
+            content = New-CopilotInstructionsContent
         }
     )
 
@@ -1457,6 +1550,7 @@ function Write-AgentFiles {
 
     # Claude Code parallel output: CLAUDE.md + .claude/settings.json
     $claudePermissions = @(ConvertTo-ClaudePermissions -WhitelistCommands $whitelistCommands)
+    $claudeDenyPermissions = @(Get-ClaudeDenyPermissions)
 
     $claudeMdPath = Join-Path $TargetPath 'CLAUDE.md'
     $claudeMdRelative = Get-RelativePath -BasePath $TargetPath -FullPath $claudeMdPath
@@ -1475,7 +1569,7 @@ function Write-AgentFiles {
     $claudeSettingsPath = Join-Path $claudeDir 'settings.json'
     $claudeSettingsRelative = Get-RelativePath -BasePath $TargetPath -FullPath $claudeSettingsPath
     if (Should-CopyFile -DestinationPath $claudeSettingsPath -Overwrite ($Force.IsPresent -or $existingRuleState.kind -like 'scaffold-*')) {
-        Set-Content -LiteralPath $claudeSettingsPath -Value (New-ClaudeSettingsContent -ClaudePermissions $claudePermissions)
+        Set-Content -LiteralPath $claudeSettingsPath -Value (New-ClaudeSettingsContent -ClaudePermissions $claudePermissions -ClaudeDenyPermissions $claudeDenyPermissions)
         Write-Status "Wrote $claudeSettingsRelative"
     }
     else {

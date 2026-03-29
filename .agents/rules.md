@@ -103,14 +103,40 @@ Set safe autorun for the following commands when they match the current workspac
 - env
 - Get-ChildItem
 - Get-Content
+- gh auth
+- gh issue
+- gh pr
+- gh repo
+- git add
+- git branch
+- git clone
+- git commit
+- git config
 - git diff
+- git fetch
+- git init
 - git log --oneline
+- git ls-tree
+- git merge
+- git pull
+- git push
+- git rebase --continue
+- git remote
+- git restore --staged
 - git status
+- git submodule
+- git switch
+- git worktree
 - ls
 - ls -la
+- pwsh -File scripts/apply-scaffold.ps1
+- pwsh -File scripts/generate-architecture-context.ps1
+- pwsh -File scripts/generate-migration-map.ps1
 - Select-String
 - sh
 - which
+
+Non-destructive project-scoped execution may autorun when it matches the allowlist above. Destructive commands remain excluded even when related command families are otherwise allowed.
 
 ## Operating Defaults
 
@@ -147,3 +173,4 @@ Respond with: "Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proce
 ## API Host Rule
 
 Remember to restart the API host or local dev server if route, handler, or API-facing changes need to be reflected live.
+
