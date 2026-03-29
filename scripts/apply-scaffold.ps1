@@ -1669,13 +1669,29 @@ function Copy-RuntimeToTarget {
         $currentCommit = git -C $ScaffoldRoot rev-parse HEAD 2>$null
     } catch { }
 
+    $upstreamPath = Join-Path $scaffoldTarget "upstream.json"
+    $lastSyncedDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    if (Test-Path -LiteralPath $upstreamPath) {
+        try {
+            $existingUpstream = Get-Content -LiteralPath $upstreamPath -Raw | ConvertFrom-Json
+            if (
+                $existingUpstream.repo_url -eq $RepoUrl -and
+                $existingUpstream.branch -eq $Branch -and
+                $existingUpstream.last_synced_commit -eq $currentCommit -and
+                $existingUpstream.last_synced_date
+            ) {
+                $lastSyncedDate = $existingUpstream.last_synced_date
+            }
+        } catch { }
+    }
+
     $upstream = @{
         repo_url = $RepoUrl
         branch = $Branch
         last_synced_commit = $currentCommit
-        last_synced_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        last_synced_date = $lastSyncedDate
     }
-    $upstream | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $scaffoldTarget "upstream.json")
+    $upstream | ConvertTo-Json | Set-Content -LiteralPath $upstreamPath
 
     Write-Status "Runtime injected to $scaffoldTarget"
 }
