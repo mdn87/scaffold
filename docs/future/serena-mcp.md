@@ -1,4 +1,6 @@
 Serena MCP Server — What You Need to Know
+Status: deferred for Lugos by default. Keep this as future reference only, not a baseline requirement.
+
 What It Does
 Serena gives Claude Code semantic code understanding — symbol-level navigation (find definitions, references, implementations) and structured editing (insert/replace at symbol boundaries). It uses Language Server Protocol (LSP) under the hood, supporting 40+ languages. Think of it as giving Claude IDE-like intelligence about your code structure.
 

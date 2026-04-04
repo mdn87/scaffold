@@ -1,5 +1,10 @@
 # Serena MCP Server Setup — Claude Code Prompt
 
+## Status
+
+This setup is currently deferred in Lugos until semantic code intelligence is clearly needed.
+Keep this document as a future reference, not as part of the default host or MCP baseline.
+
 **Target:** Claude Code
 **Source:** https://github.com/oraios/serena
 
