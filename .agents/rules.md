@@ -174,3 +174,8 @@ Respond with: "Estimated quota impact: EXTREMELY HIGH. Ultra compute mode. Proce
 
 Remember to restart the API host or local dev server if route, handler, or API-facing changes need to be reflected live.
 
+
+## Git Safe Order
+
+- Commit and push changes in this module before committing in the parent (lugos) repo so parent references never point at unpushed commits.
+- After pushing here, bump the submodule pointer in the parent: `cd <lugos-root> && git add <this-dir> && git commit`. Stale pointers cause the parent to auto-stash on every pull even when there are no real changes.
