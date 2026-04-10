@@ -143,6 +143,8 @@ Non-destructive project-scoped execution may autorun when it matches the allowli
 - Prefer small, reviewable changes.
 - Preserve project-owned rules and conventions before applying scaffold defaults.
 - Match existing path and runtime conventions instead of forcing a new layout mid-change.
+- For Lugos-family repos, defer routine code-intelligence policy to the umbrella docs instead of
+  restating it here.
 - Treat project docs such as README.md, plan files, and architecture notes as authoritative inputs for future updates to .agents.
 - If docs are missing, use entry points, filenames, comments, and local Git metadata as fallback signals before defaulting to generic rules.
 - Remote GitHub enrichment is best-effort only and must never block scaffold application.

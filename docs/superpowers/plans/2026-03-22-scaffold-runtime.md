@@ -133,7 +133,7 @@ mkdir -p runtime/{orchestration,skills,tools,references,rules/stacks,rules/per-p
 ```json
 {
   "version": "1.0.0",
-  "description": "External tool and MCP references for scaffold-managed projects",
+  "description": "Optional external tool and MCP references for scaffold-managed projects",
   "references": [
     {
       "name": "context7",
@@ -152,30 +152,15 @@ mkdir -p runtime/{orchestration,skills,tools,references,rules/stacks,rules/per-p
       "platform": "claude",
       "auto_suggest_when": ["frontend", "web"],
       "conflicts": {}
-    },
-    {
-      "name": "serena",
-      "description": "Code intelligence — symbol resolution, reference finding, refactoring",
-      "type": "mcp",
-      "url": "https://github.com/codegen-oss/serena",
-      "platform": "all",
-      "auto_suggest_when": ["api", "large_codebase"],
-      "conflicts": {
-        "behavioral": [
-          {
-            "pattern": "auto-refactor",
-            "resolution": "defer to milestone-review orchestration",
-            "note": "Treat Serena refactor suggestions as recommendations, not actions, until reviewed"
-          }
-        ],
-        "scaffold_overrides": {
-          "priority": "scaffold wins on orchestration, tool wins on code intelligence"
-        }
-      }
     }
   ]
 }
 ```
+
+Semantic code-intelligence references are intentionally omitted from the default registry. For
+Lugos-family repos, if a future project needs one, add it as an explicit project-level opt-in that
+defers to the Lugos umbrella code-intelligence docs rather than making it part of the starter
+baseline.
 
 - [ ] **Step 4: Validate JSON files parse correctly**
 
@@ -1718,18 +1703,17 @@ Add a `_schemas` key to `runtime/tools/manifest.json` so the implementing agent 
 "_schemas": {
   "tool-config": {
     "description": "Schema for .scaffold/project/tool-config.json — created at init, never overwritten by sync",
-    "example": {
-      "project": "{project_name}",
-      "initialized": "{YYYY-MM-DD}",
-      "audit_interval_milestones": 3,
-      "activated_tools": ["sync", "plan-overview-gen"],
-      "activated_references": ["context7"],
-      "deactivated": {
-        "codex-review": "no Codex CLI available",
-        "serena": "small project, not needed"
+      "example": {
+        "project": "{project_name}",
+        "initialized": "{YYYY-MM-DD}",
+        "audit_interval_milestones": 3,
+        "activated_tools": ["sync", "plan-overview-gen"],
+        "activated_references": ["context7"],
+        "deactivated": {
+          "codex-review": "no Codex CLI available"
+        }
       }
-    }
-  },
+    },
   "usage-log": {
     "description": "Schema for .scaffold/project/usage-log.json — append-only, one entry per milestone",
     "example": [
@@ -1757,8 +1741,7 @@ The `tool-config.json` schema (for `.scaffold/project/tool-config.json`):
   "activated_tools": ["sync", "plan-overview-gen"],
   "activated_references": ["context7"],
   "deactivated": {
-    "codex-review": "no Codex CLI available",
-    "serena": "small project, not needed"
+    "codex-review": "no Codex CLI available"
   }
 }
 ```

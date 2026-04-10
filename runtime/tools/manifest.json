@@ -11,8 +11,7 @@
         "activated_tools": ["sync", "plan-overview-gen"],
         "activated_references": ["context7"],
         "deactivated": {
-          "codex-review": "no Codex CLI available",
-          "serena": "small project, not needed"
+          "codex-review": "no Codex CLI available"
         }
       }
     },

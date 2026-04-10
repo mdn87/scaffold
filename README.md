@@ -23,6 +23,8 @@ When you run `apply-scaffold` against a project directory it:
 | **Runtime** | `.scaffold/` inside each project | Lives in the project — syncs from upstream, runs every session |
 
 The bootstrap layer runs from this repo. The runtime layer travels with the project and self-updates.
+For Lugos-family projects, routine code-intelligence policy still comes from the Lugos umbrella docs,
+not from scaffold-local guidance.
 
 ---
 
@@ -67,7 +69,7 @@ Once `.scaffold/` is in a project, agents use it throughout every session:
 | `.scaffold/orchestration/` | Plan and milestone templates, step-by-step agent orchestration |
 | `.scaffold/skills/` | Self-update, session handoff, compute budget guard |
 | `.scaffold/tools/` | Tool manifest, codex-review.sh, plan-overview-gen.sh |
-| `.scaffold/references/` | MCP reference registry with auto-suggest triggers |
+| `.scaffold/references/` | Optional external reference registry; defer code-intelligence defaults to Lugos umbrella policy |
 | `.scaffold/rules/` | Universal rules, stack-specific rules, per-platform rendering |
 | `.scaffold/docs-templates/` | Source templates for project-brief, architecture, INDEX, ADR |
 | `.scaffold/project/` | **Project-owned** — rules.md, tool-config.json, usage-log.json, handoff |

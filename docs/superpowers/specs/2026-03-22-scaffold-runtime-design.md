@@ -252,7 +252,10 @@ If accepted:
 |-----------|-------------|------|
 | Context7 | Library documentation lookup | MCP |
 | Claude Preview | Browser preview | MCP |
-| Serena | Code intelligence | MCP |
+
+Semantic code-intelligence tooling is intentionally omitted from the default starter set. For
+Lugos-family repos, if a project opts into it, the decision must defer to the Lugos umbrella
+code-intelligence docs rather than this scaffold spec.
 
 ### Discovery at Init
 
@@ -260,7 +263,9 @@ During project initialization, `apply-scaffold.ps1`:
 
 1. Reads `runtime/tools/manifest.json` and `runtime/references/registry.json`
 2. Makes assumptions based on detected stack (e.g., Python project gets pytest references)
-3. Asks the user about uncertain tools ("API surface detected — include Serena?")
+3. Asks the user about uncertain tools. For Lugos-family repos, defer any semantic
+   code-intelligence decision to the Lugos umbrella policy instead of treating it as a scaffold
+   default
 4. Writes active tool selection to `.scaffold/project/tool-config.json`
 
 ### Tool Activation Lifecycle
@@ -269,32 +274,34 @@ Tools move through three states: **available** (in manifest), **activated** (in 
 
 Activation happens at two points:
 
-1. **Plan-init (coarse):** When the plan is built, the agent maps tools to milestones based on scope. Example: "M2 touches API endpoints — activating Serena for M2+." This mapping is written into `PLAN-OVERVIEW.md` as a tool-milestone matrix.
+1. **Plan-init (coarse):** When the plan is built, the agent maps tools to milestones based on scope. Example: "M2 touches frontend review work — activating Claude Preview for M2." This mapping is written into `PLAN-OVERVIEW.md` as a tool-milestone matrix.
 2. **Milestone start (refined):** Before implementation begins, the agent reviews the milestone scope against activated tools and confirms or adjusts. Tools can be activated or deactivated at this point based on how the project has evolved since plan-init.
 
 ### Tool Conflict Resolution
 
-External tools (Serena, Context7, etc.) may have their own opinions about project structure or behavior that conflict with scaffold orchestration. Two flavors:
+External tools and references (Context7, Claude Preview, or any future project-specific additions)
+may have their own opinions about project structure or behavior that conflict with scaffold orchestration. Two flavors:
 
 - **Structural conflicts:** Tool expects files in location X, scaffold puts them in location Y. Usually not a real conflict — different domains.
 - **Behavioral conflicts:** Tool says "do X," scaffold orchestration says "do Y." Example: a tool suggests auto-refactoring, but milestone orchestration requires cross-agent review first.
 
-Each tool entry in `manifest.json` includes a `conflicts` section:
+Each tool entry in `manifest.json` includes a `conflicts` section. If a future project adds an
+optional semantic code-intelligence reference, it should follow the same pattern:
 
 ```json
 {
-  "name": "serena",
+  "name": "optional-semantic-code-intelligence",
   "conflicts": {
     "behavioral": [
       {
         "pattern": "auto-refactor",
         "resolution": "defer to milestone-review orchestration",
-        "note": "Treat Serena refactor suggestions as recommendations, not actions, until reviewed"
+        "note": "Treat semantic code-intelligence refactor suggestions as recommendations, not actions, until reviewed"
       }
     ]
   },
   "scaffold_overrides": {
-    "priority": "scaffold wins on orchestration, tool wins on code intelligence"
+    "priority": "scaffold wins on orchestration; for Lugos-family repos, umbrella policy defines code-intelligence defaults"
   }
 }
 ```
@@ -434,7 +441,7 @@ Triggered by user request or every N milestones. The interval is configured in `
 ### Never Used
 | Tool | Injected At | Recommendation |
 |------|-------------|----------------|
-| Serena | init | Remove — no code intelligence needed |
+| Optional semantic code-intelligence | init | Remove unless the project explicitly opts in |
 
 ### Underutilized
 | Tool | Last Used | Suggestion |
@@ -462,7 +469,7 @@ Triggered by user request or every N milestones. The interval is configured in `
     "milestone": "M1",
     "date": "2026-03-22",
     "used": ["handoff", "codex-review", "self-update"],
-    "available": ["handoff", "codex-review", "self-update", "serena", "context7"]
+    "available": ["handoff", "codex-review", "self-update", "context7"]
   }
 ]
 ```
