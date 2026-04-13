@@ -23,5 +23,6 @@ node_modules/
 .venv/
 venv/
 __pycache__/
+.opencode/
 .claude/handoff.md
 .claude/handoff-history/
